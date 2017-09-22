@@ -8,7 +8,12 @@
 import scrapy
 
 
-class WeimaqiItem(scrapy.Item):
-    # define the fields for your item here like:
-    # name = scrapy.Field()
-    pass
+class PlaceDataItem(scrapy.Item):
+    name = scrapy.Field()  # 收入
+    income = scrapy.Field()  # 掉落数量
+    coin_buy = scrapy.Field()  # 销售币数
+    coin_free = scrapy.Field  # 派发币数
+    device_have_income = scrapy.Field  # 有营收的机器数量
+    device_no_income = scrapy.Field  # 0营收的机器数量
+
+
