@@ -88,3 +88,22 @@ DOWNLOAD_DELAY = 2
 #HTTPCACHE_DIR = 'httpcache'
 #HTTPCACHE_IGNORE_HTTP_CODES = []
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
+
+FEED_EXPORTERS = {
+    'csv': 'weimaqi.spiders.csv_item_exporter.WeimaqiCsvItemExporter',
+}
+
+FIELDS_TO_EXPORT = [
+    'name',
+    'income',
+    'income_average',
+    'profit',
+    'profit_average',
+    'probability',
+    'gift',
+    'coin_buy',
+    'coin_free',
+    'num_of_game',
+    'device_have_income',
+    'device_no_income'
+]

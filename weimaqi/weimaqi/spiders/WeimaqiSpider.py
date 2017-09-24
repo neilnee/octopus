@@ -1,11 +1,11 @@
 # coding=utf-8
-import datetime
 import json
 import re
 
 import scrapy
 from scrapy import FormRequest, Request
 from scrapy.spiders import CrawlSpider
+
 from ..items import PlaceDataItem
 
 
@@ -39,38 +39,16 @@ class WeimaqiSpide(CrawlSpider):
     }
     uid = ''
     pwd = ''
-    yestoday = ''
+    yesterday = ''
+    price = 12
 
-    def read_hiddens(self, response):
-        event_agent = ''
-        event_argument = ''
-        view_state = ''
-        view_state_navigator = ''
-        event_validation = ''
-        # 读取各种请求用到的参数
-        param_list = response.xpath('//*[@id="__EVENTTARGET"]/@value')
-        if len(param_list) > 0:
-            event_agent = str(param_list[0].extract())
-        param_list = response.xpath('//*[@id="__EVENTARGUMENT"]/@value')
-        if len(param_list):
-            event_argument = str(param_list[0].extract())
-        param_list = response.xpath('//*[@id="__VIEWSTATE"]/@value')
-        if len(param_list):
-            view_state = str(param_list[0].extract())
-        param_list = response.xpath('//*[@id="__VIEWSTATEGENERATOR"]/@value')
-        if len(param_list):
-            view_state_navigator = str(param_list[0].extract())
-        param_list = response.xpath('//*[@id="__EVENTVALIDATION"]/@value')
-        if len(param_list):
-            event_validation = str(param_list[0].extract())
-        return event_agent, event_argument, view_state, view_state_navigator, event_validation
-
-    def __init__(self, uid='', pwd='', yestoday='', *args, **kwargs):
+    def __init__(self, uid='', pwd='', yestoday='', price=12, *args, **kwargs):
         super(WeimaqiSpide, self).__init__(*args, **kwargs)
         self.uid = uid
         self.pwd = pwd
-        self.yestoday = yestoday
-        print ('uid=' + uid + '; pwd=' + pwd + "; yestoday=" + yestoday)
+        self.yesterday = yestoday
+        self.price = float(price)
+        print ('uid=' + uid + '; pwd=' + pwd + "; yestoday=" + yestoday + "; price=" + str(price))
 
     def start_requests(self):
         return [Request("https://weimaqi.net/admin_mch_new/login.aspx",
@@ -103,8 +81,8 @@ class WeimaqiSpide(CrawlSpider):
                                               '__VIEWSTATE': view_state,
                                               '__VIEWSTATEGENERATOR': view_state_navigator,
                                               '__EVENTVALIDATION': event_validation,
-                                              'ctl00$ContentPlaceHolder1$txtDateStart': self.yestoday,
-                                              'ctl00$ContentPlaceHolder1$txtDateEnd': self.yestoday,
+                                              'ctl00$ContentPlaceHolder1$txtDateStart': self.yesterday,
+                                              'ctl00$ContentPlaceHolder1$txtDateEnd': self.yesterday,
                                               'ctl00$ContentPlaceHolder1$btnYesterday': '昨日',
                                               'GridView1_length': '100'
                                           },
@@ -125,13 +103,39 @@ class WeimaqiSpide(CrawlSpider):
                                              '__VIEWSTATE': view_state,
                                              '__VIEWSTATEGENERATOR': view_state_navigator,
                                              '__EVENTVALIDATION': event_validation,
-                                             'ctl00$ContentPlaceHolder1$txtDateStart': self.yestoday,
-                                             'ctl00$ContentPlaceHolder1$txtDateEnd': self.yestoday,
+                                             'ctl00$ContentPlaceHolder1$txtDateStart': self.yesterday,
+                                             'ctl00$ContentPlaceHolder1$txtDateEnd': self.yesterday,
                                              'GridView1_length': '100'
                                          },
                                          callback=self.read_place_data,
                                          dont_filter=True)
 
+    # noinspection PyMethodMayBeStatic
+    def read_hiddens(self, response):
+        event_agent = ''
+        event_argument = ''
+        view_state = ''
+        view_state_navigator = ''
+        event_validation = ''
+        # 读取各种请求用到的参数
+        param_list = response.xpath('//*[@id="__EVENTTARGET"]/@value')
+        if len(param_list) > 0:
+            event_agent = str(param_list[0].extract())
+        param_list = response.xpath('//*[@id="__EVENTARGUMENT"]/@value')
+        if len(param_list):
+            event_argument = str(param_list[0].extract())
+        param_list = response.xpath('//*[@id="__VIEWSTATE"]/@value')
+        if len(param_list):
+            view_state = str(param_list[0].extract())
+        param_list = response.xpath('//*[@id="__VIEWSTATEGENERATOR"]/@value')
+        if len(param_list):
+            view_state_navigator = str(param_list[0].extract())
+        param_list = response.xpath('//*[@id="__EVENTVALIDATION"]/@value')
+        if len(param_list):
+            event_validation = str(param_list[0].extract())
+        return event_agent, event_argument, view_state, view_state_navigator, event_validation
+
+    # noinspection PyMethodMayBeStatic,PyBroadException
     def read_place_data(self, response):
         item = PlaceDataItem()
         try:
@@ -140,28 +144,23 @@ class WeimaqiSpide(CrawlSpider):
                                      .extract()).group()[1:-1]
         except Exception:
             item['name'] = ''
-
         try:
             item['gift'] = int(re.search('\(.+\)', response.xpath('//*[@id="GridView1"]/tfoot/tr/td[6]/text()')[0]
-                                     .extract()).group()[1:-1])
+                                         .extract()).group()[1:-1])
         except Exception:
             item['gift'] = 0
-
         try:
             item['income'] = float(response.xpath('//*[@id="GridView1"]/tfoot/tr/td[2]/text()')[0].extract())
         except Exception:
             item['income'] = 0.0
-
         try:
             item['coin_buy'] = int(response.xpath('//*[@id="GridView1"]/tfoot/tr/td[8]/text()')[0].extract())
         except Exception:
             item['coin_buy'] = 0
-
         try:
             item['coin_free'] = int(response.xpath('//*[@id="GridView1"]/tfoot/tr/td[9]/text()')[0].extract())
         except Exception:
             item['coin_free'] = 0
-
         devices = response.xpath('//*[@id="GridView1"]/tbody/tr')
         try:
             item['device_have_income'] = 0
@@ -176,6 +175,24 @@ class WeimaqiSpide(CrawlSpider):
                 item['device_no_income'] = item['device_no_income'] + 1
         except Exception:
             item['device_no_income'] = len(devices) - item['device_have_income']
-
+        try:
+            item['income_average'] = item['income'] / float(item['device_have_income'] + item['device_no_income'])
+        except Exception:
+            item['income_average'] = 0
+        try:
+            item['profit'] = item['income'] - item['gift'] * self.price
+        except Exception:
+            item['profit'] = 0
+        try:
+            item['profit_average'] = item['profit'] / float(item['device_have_income'] + item['device_no_income'])
+        except Exception:
+            item['profit_average'] = 0
+        try:
+            item['num_of_game'] = (item['coin_buy'] + item['coin_free']) / 2
+        except Exception:
+            item['num_of_game'] = 0
+        try:
+            item['probability'] = float(item['gift']) / float(item['num_of_game'])
+        except:
+            item['probability'] = 0.0
         yield item
-
