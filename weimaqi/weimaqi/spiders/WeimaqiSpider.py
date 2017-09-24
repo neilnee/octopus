@@ -6,15 +6,7 @@ import re
 import scrapy
 from scrapy import FormRequest, Request
 from scrapy.spiders import CrawlSpider
-
 from ..items import PlaceDataItem
-
-
-def getYesterday():
-    today = datetime.date.today()
-    oneday = datetime.timedelta(days=1)
-    yesterday = today - oneday
-    return yesterday
 
 
 def is_number(s):
@@ -45,7 +37,9 @@ class WeimaqiSpide(CrawlSpider):
                       "Chrome/60.0.3112.113 Mobile Safari/537.36",
         "X-Requested-With": "XMLHttpRequest",
     }
-    place_items = []
+    uid = ''
+    pwd = ''
+    yestoday = ''
 
     def read_hiddens(self, response):
         event_agent = ''
@@ -71,6 +65,13 @@ class WeimaqiSpide(CrawlSpider):
             event_validation = str(param_list[0].extract())
         return event_agent, event_argument, view_state, view_state_navigator, event_validation
 
+    def __init__(self, uid='', pwd='', yestoday='', *args, **kwargs):
+        super(WeimaqiSpide, self).__init__(*args, **kwargs)
+        self.uid = uid
+        self.pwd = pwd
+        self.yestoday = yestoday
+        print ('uid=' + uid + '; pwd=' + pwd + "; yestoday=" + yestoday)
+
     def start_requests(self):
         return [Request("https://weimaqi.net/admin_mch_new/login.aspx",
                         callback=self.start_login)]
@@ -80,7 +81,8 @@ class WeimaqiSpide(CrawlSpider):
                                           url='https://weimaqi.net/admin_mch_new/login.aspx',
                                           method='POST',
                                           formdata={
-                                              },
+                                              'uid': self.uid,
+                                              'pwd': self.pwd},
                                           callback=self.check_person,
                                           dont_filter=True)]
 
@@ -101,8 +103,8 @@ class WeimaqiSpide(CrawlSpider):
                                               '__VIEWSTATE': view_state,
                                               '__VIEWSTATEGENERATOR': view_state_navigator,
                                               '__EVENTVALIDATION': event_validation,
-                                              'ctl00$ContentPlaceHolder1$txtDateStart': str(getYesterday()),
-                                              'ctl00$ContentPlaceHolder1$txtDateEnd': str(getYesterday()),
+                                              'ctl00$ContentPlaceHolder1$txtDateStart': self.yestoday,
+                                              'ctl00$ContentPlaceHolder1$txtDateEnd': self.yestoday,
                                               'ctl00$ContentPlaceHolder1$btnYesterday': '昨日',
                                               'GridView1_length': '100'
                                           },
@@ -123,8 +125,8 @@ class WeimaqiSpide(CrawlSpider):
                                              '__VIEWSTATE': view_state,
                                              '__VIEWSTATEGENERATOR': view_state_navigator,
                                              '__EVENTVALIDATION': event_validation,
-                                             'ctl00$ContentPlaceHolder1$txtDateStart': str(getYesterday()),
-                                             'ctl00$ContentPlaceHolder1$txtDateEnd': str(getYesterday()),
+                                             'ctl00$ContentPlaceHolder1$txtDateStart': self.yestoday,
+                                             'ctl00$ContentPlaceHolder1$txtDateEnd': self.yestoday,
                                              'GridView1_length': '100'
                                          },
                                          callback=self.read_place_data,

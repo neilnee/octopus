@@ -1,2 +1,5 @@
 .idea/
-weimaqi/account
+*.csv
+docs/
+weimaqi/weimaqi/result/
+weimaqi/weimaqi/account.json
