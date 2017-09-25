@@ -8,7 +8,6 @@
 import scrapy
 
 
-# TODO 增加更多的维度, 输出文件的列顺序
 class PlaceDataItem(scrapy.Item):
     name = scrapy.Field()  # 场地名称
     income = scrapy.Field()  # 营收

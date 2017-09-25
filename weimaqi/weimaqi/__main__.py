@@ -2,53 +2,49 @@
 import json
 
 import datetime
+from multiprocessing import Process
+
 from scrapy import cmdline
 
 
-def getYesterday():
+def getyesterday():
     today = datetime.date.today()
     oneday = datetime.timedelta(days=1)
-    yesterday = today - oneday
-    return yesterday
+    return today - oneday
 
-# TODO 分进程并行执行爬取任务
-with open("../account.json") as account_file:
-    load_account = json.load(account_file)
-    yesterday = str(getYesterday())
-    cmdline.execute(('scrapy crawl weimaqi -a uid='
-                     + str(load_account[0]['uid'])
-                     + ' -a pwd='
-                     + str(load_account[0]['pwd'])
-                     + ' -a yestoday='
-                     + yesterday
-                     + ' -a price=12'
-                     + ' -o '
-                     + str(load_account[0]['output'])
-                     + '_' + yesterday
-                     + '.csv').split())
 
-    cmdline.execute(('scrapy crawl weimaqi -a uid='
-                    + str(load_account[1]['uid'])
-                    + ' -a pwd='
-                    + str(load_account[1]['pwd'])
-                    + ' -a yestoday='
-                    + yesterday
-                    + ' -a price=12'
-                    + ' -o '
-                    + str(load_account[1]['output'])
-                    + '_' + yesterday
-                    + '.csv').split())
+class SpiderProcess(Process):
+    def __init__(self, cmd):
+        Process.__init__(self)
+        self.cmd = cmd
 
-    cmdline.execute(('scrapy crawl weimaqi -a uid='
-                    + str(load_account[2]['uid'])
-                    + ' -a pwd='
-                    + str(load_account[2]['pwd'])
-                    + ' -a yestoday='
-                    + yesterday
-                    + ' -a price=12'
-                    + ' -o '
-                    + str(load_account[2]['output'])
-                    + '_' + yesterday
-                    + '.csv').split())
+    def run(self):
+        print 'process execute'
+        cmdline.execute(self.cmd)
 
-    account_file.close()
+
+if __name__ == '__main__':
+    cmds = []
+    with open("../account.json") as account_file:
+        load_account = json.load(account_file)
+        yesterday = str(getyesterday())
+        for i in range(0, len(load_account)):
+            cmds.append(('scrapy crawl weimaqi -a uid='
+                        + str(load_account[i]['uid'])
+                        + ' -a pwd='
+                        + str(load_account[i]['pwd'])
+                        + ' -a yestoday='
+                        + yesterday
+                        + ' -a price=12'
+                        + ' -o '
+                        + str(load_account[i]['output'])
+                        + '_' + yesterday
+                        + '.csv').split())
+        account_file.close()
+    for c in cmds:
+        p = SpiderProcess(c)
+        p.daemon = True
+        p.start()
+        p.join()
+
+    print 'spider execute finish'
