@@ -3,4 +3,5 @@
 docs/
 weimaqi/weimaqi/result/
 weimaqi/account.json
+weimaqi/place.json
 .DS_Store
