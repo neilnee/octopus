@@ -1,4 +1,5 @@
 # coding=utf-8
+import hashlib
 import json
 import re
 
@@ -41,14 +42,25 @@ class WeimaqiSpide(CrawlSpider):
     pwd = ''
     yesterday = ''
     price = 12
+    exclude = []
 
-    def __init__(self, uid='', pwd='', yestoday='', price=12, *args, **kwargs):
+    def __init__(self, uid='', pwd='', yestoday='', price=12, ch='', *args, **kwargs):
         super(WeimaqiSpide, self).__init__(*args, **kwargs)
         self.uid = uid
         self.pwd = pwd
         self.yesterday = yestoday
         self.price = float(price)
-        print ('uid=' + uid + '; pwd=' + pwd + "; yestoday=" + yestoday + "; price=" + str(price))
+        if not ch == '':
+            with open("../place.json") as place_file:
+                place = json.load(place_file)
+                place_list = place[ch]
+                if len(place_list) > 0:
+                    for p in place_list:
+                        self.exclude.append(hashlib.md5(p.encode('utf-8')).hexdigest())
+                place_file.close()
+
+        print ('uid=' + uid + '; pwd=' + pwd + "; yestoday=" + yestoday + "; price=" + str(price)
+               + "\n exclude place :\n" + str(self.exclude))
 
     def start_requests(self):
         return [Request("https://weimaqi.net/admin_mch_new/login.aspx",
@@ -92,23 +104,25 @@ class WeimaqiSpide(CrawlSpider):
     def start_read_data(self, response):
         (event_agent, event_argument, view_state, view_state_navigator, event_validation) = self.read_hiddens(response)
         for sel in response.xpath('//*[@id="GridView1"]/tbody/tr'):
-            if len(sel.xpath('td/a[@id="lkbtn_detail"]/@href')) > 0:
-                jscall = sel.xpath('td/a[@id="lkbtn_detail"]/@href')[0].extract()
-                jscall = str(re.search("\('.+',", jscall).group()[2:-2])
-                yield scrapy.FormRequest("https://weimaqi.net/admin_mch_new/baobiao/turnoverStat.aspx",
-                                         method='POST',
-                                         formdata={
-                                             '__EVENTTARGET': jscall,
-                                             '__EVENTARGUMENT': event_argument,
-                                             '__VIEWSTATE': view_state,
-                                             '__VIEWSTATEGENERATOR': view_state_navigator,
-                                             '__EVENTVALIDATION': event_validation,
-                                             'ctl00$ContentPlaceHolder1$txtDateStart': self.yesterday,
-                                             'ctl00$ContentPlaceHolder1$txtDateEnd': self.yesterday,
-                                             'GridView1_length': '100'
-                                         },
-                                         callback=self.read_place_data,
-                                         dont_filter=True)
+            place_name = sel.xpath('td/a[@id="lkbtn_detail"]/span[@class="device_tag"]/text()')[0].extract()
+            if hashlib.md5(place_name.encode('utf-8')).hexdigest() not in self.exclude:
+                if len(sel.xpath('td/a[@id="lkbtn_detail"]/@href')) > 0:
+                    jscall = sel.xpath('td/a[@id="lkbtn_detail"]/@href')[0].extract()
+                    jscall = str(re.search("\('.+',", jscall).group()[2:-2])
+                    yield scrapy.FormRequest("https://weimaqi.net/admin_mch_new/baobiao/turnoverStat.aspx",
+                                             method='POST',
+                                             formdata={
+                                                 '__EVENTTARGET': jscall,
+                                                 '__EVENTARGUMENT': event_argument,
+                                                 '__VIEWSTATE': view_state,
+                                                 '__VIEWSTATEGENERATOR': view_state_navigator,
+                                                 '__EVENTVALIDATION': event_validation,
+                                                 'ctl00$ContentPlaceHolder1$txtDateStart': self.yesterday,
+                                                 'ctl00$ContentPlaceHolder1$txtDateEnd': self.yesterday,
+                                                 'GridView1_length': '100'
+                                             },
+                                             callback=self.read_place_data,
+                                             dont_filter=True)
 
     # noinspection PyMethodMayBeStatic
     def read_hiddens(self, response):
