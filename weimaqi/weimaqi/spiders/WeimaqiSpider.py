@@ -43,13 +43,15 @@ class WeimaqiSpide(CrawlSpider):
     yesterday = ''
     price = 12
     exclude = []
+    cpt = 2
 
-    def __init__(self, uid='', pwd='', yestoday='', price=12, ch='', *args, **kwargs):
+    def __init__(self, uid='', pwd='', yestoday='', price=12, ch='', cpt=2, *args, **kwargs):
         super(WeimaqiSpide, self).__init__(*args, **kwargs)
         self.uid = uid
         self.pwd = pwd
         self.yesterday = yestoday
         self.price = float(price)
+        self.cpt = int(cpt)
         if not ch == '':
             with open("../place.json") as place_file:
                 place = json.load(place_file)
@@ -202,7 +204,7 @@ class WeimaqiSpide(CrawlSpider):
         except Exception:
             item['profit_average'] = 0
         try:
-            item['num_of_game'] = (item['coin_buy'] + item['coin_free']) / 2
+            item['num_of_game'] = (item['coin_buy'] + item['coin_free']) / self.cpt
         except Exception:
             item['num_of_game'] = 0
         try:

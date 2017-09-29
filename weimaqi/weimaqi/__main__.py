@@ -38,6 +38,8 @@ if __name__ == '__main__':
                         + ' -a price=12'
                         + ' -a ch='
                         + str(load_account[i]['place'])
+                        + ' -a cpt='
+                        + str(load_account[i]['cpt'])
                         + ' -o '
                         + str(load_account[i]['output'])
                         + '_' + yesterday
