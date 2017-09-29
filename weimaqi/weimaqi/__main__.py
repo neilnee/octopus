@@ -41,8 +41,7 @@ if __name__ == '__main__':
                         + ' -a cpt='
                         + str(load_account[i]['cpt'])
                         + ' -o '
-                        + str(load_account[i]['output'])
-                        + '_' + yesterday
+                        + 'revenue/revenue' + '_' + yesterday + '_' + str(load_account[i]['place'])
                         + '.csv').split())
         account_file.close()
     for c in cmds:

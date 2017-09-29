@@ -1,7 +1,7 @@
 .idea/
 *.csv
-docs/
-weimaqi/weimaqi/result/
 weimaqi/account.json
 weimaqi/place.json
+weimaqi/weimaqi/setting/
+weimaqi/weimaqi/revenue/
 .DS_Store
