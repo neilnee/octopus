@@ -1,6 +1,9 @@
 # coding=utf-8
 import hashlib
 import json
+import random
+
+from scrapy import cmdline
 
 # 测试读取排除场地信息
 # exclude = []
@@ -15,4 +18,14 @@ import json
 #         place_file.close()
 # print ('exclude place\n' + str(exclude))
 
-print hashlib.md5(hashlib.md5("catchme@5107yl").hexdigest().upper()).hexdigest()
+# 密码处理
+# print hashlib.md5(hashlib.md5("xxx").hexdigest().upper()).hexdigest()
+
+# 设置爬取
+with open("../account.json") as account_file:
+    load_account = json.load(account_file)
+    cmdline.execute(('scrapy crawl setting -a uid='
+                    + str(load_account[2]['uid'])
+                    + ' -a pwd='
+                    + str(load_account[2]['pwd'])).split())
+    account_file.close()
