@@ -8,6 +8,7 @@
 import scrapy
 
 
+# 场地营收
 class PlaceDataItem(scrapy.Item):
     name = scrapy.Field()  # 场地名称
     income = scrapy.Field()  # 营收
@@ -23,6 +24,7 @@ class PlaceDataItem(scrapy.Item):
     device_no_income = scrapy.Field()  # 0营收的机器数量
 
 
+# 设置
 class SettingItem(scrapy.Item):
     setting_param = scrapy.Field()  # 设置参数 num0_1
     coin_per_time = scrapy.Field()  # 几投一玩 num1_1
