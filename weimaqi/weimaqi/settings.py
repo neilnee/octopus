@@ -93,7 +93,7 @@ FEED_EXPORTERS = {
     'csv': 'weimaqi.spiders.csv_item_exporter.WeimaqiCsvItemExporter',
 }
 
-FIELDS_TO_EXPORT = [
+FIELDS_TO_EXPORT_REVENUE = [
     'name',
     'income',
     'income_average',
@@ -106,4 +106,29 @@ FIELDS_TO_EXPORT = [
     'num_of_game',
     'device_have_income',
     'device_no_income'
+]
+
+FIELDS_TO_EXPORT_SETTING = [
+    'setting_param',
+    'coin_per_time',
+    'game_duration',
+    'music',
+    'air_pick',
+    'out_pos',
+    'shake_clear',
+    'music_volume',
+    'free_for_continue',
+    'strong_force',
+    'weak_force',
+    'pick_height',
+    'strong_to_weak',
+    'line_height',
+    'out_mode',
+    'probability',
+    'eyes',
+    'keep',
+    'account_clear',
+    'reset',
+    'disable_btn',
+    'disable_board'
 ]

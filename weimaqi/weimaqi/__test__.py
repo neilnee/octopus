@@ -22,10 +22,10 @@ from scrapy import cmdline
 # print hashlib.md5(hashlib.md5("xxx").hexdigest().upper()).hexdigest()
 
 # 设置爬取
-with open("../account.json") as account_file:
-    load_account = json.load(account_file)
-    cmdline.execute(('scrapy crawl setting -a uid='
-                    + str(load_account[2]['uid'])
-                    + ' -a pwd='
-                    + str(load_account[2]['pwd'])).split())
-    account_file.close()
+# with open("../account.json") as account_file:
+#     load_account = json.load(account_file)
+#     cmdline.execute(('scrapy crawl setting -a uid='
+#                     + str(load_account[2]['uid'])
+#                     + ' -a pwd='
+#                     + str(load_account[2]['pwd'])).split())
+#     account_file.close()

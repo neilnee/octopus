@@ -5,8 +5,10 @@ import time
 import re
 
 import scrapy
-from scrapy import Request, FormRequest
+from scrapy import Request, FormRequest, Selector
 from scrapy.spiders import CrawlSpider
+
+from ..items import SettingItem
 
 
 class SettingSpider(CrawlSpider):
@@ -147,5 +149,29 @@ class SettingSpider(CrawlSpider):
                 dont_filter=True
             )]
 
+    # noinspection PyMethodMayBeStatic
     def handle_receivedata(self, response):
-        print (response.body)
+        item = SettingItem()
+        item['setting_param'] = int(Selector(text=response.body).xpath('//*[@id="num0_1"]/@value')[0].extract())
+        item['coin_per_time'] = int(Selector(text=response.body).xpath('//*[@id="num1_1"]/@value')[0].extract())
+        item['game_duration'] = int(Selector(text=response.body).xpath('//*[@id="num2_1"]/@value')[0].extract())
+        item['music'] = int(Selector(text=response.body).xpath('//*[@id="num3_1"]/@value')[0].extract())
+        item['air_pick'] = int(Selector(text=response.body).xpath('//*[@id="num4_1"]/@value')[0].extract())
+        item['out_pos'] = int(Selector(text=response.body).xpath('//*[@id="num5_1"]/@value')[0].extract())
+        item['shake_clear'] = int(Selector(text=response.body).xpath('//*[@id="num6_1"]/@value')[0].extract())
+        item['music_volume'] = int(Selector(text=response.body).xpath('//*[@id="num7_1"]/@value')[0].extract())
+        item['free_for_continue'] = int(Selector(text=response.body).xpath('//*[@id="num8_1"]/@value')[0].extract())
+        item['strong_force'] = int(Selector(text=response.body).xpath('//*[@id="num9_1"]/@value')[0].extract())
+        item['weak_force'] = int(Selector(text=response.body).xpath('//*[@id="num10_1"]/@value')[0].extract())
+        item['pick_height'] = int(Selector(text=response.body).xpath('//*[@id="num11_1"]/@value')[0].extract())
+        item['strong_to_weak'] = int(Selector(text=response.body).xpath('//*[@id="num12_1"]/@value')[0].extract())
+        item['line_height'] = int(Selector(text=response.body).xpath('//*[@id="num13_1"]/@value')[0].extract())
+        item['out_mode'] = int(Selector(text=response.body).xpath('//*[@id="num14_1"]/@value')[0].extract())
+        item['probability'] = int(Selector(text=response.body).xpath('//*[@id="num15_1"]/@value')[0].extract())
+        item['eyes'] = int(Selector(text=response.body).xpath('//*[@id="num16_1"]/@value')[0].extract())
+        item['keep'] = int(Selector(text=response.body).xpath('//*[@id="num17_1"]/@value')[0].extract())
+        item['account_clear'] = int(Selector(text=response.body).xpath('//*[@id="num18_1"]/@value')[0].extract())
+        item['reset'] = int(Selector(text=response.body).xpath('//*[@id="num19_1"]/@value')[0].extract())
+        item['disable_btn'] = int(Selector(text=response.body).xpath('//*[@id="num20_1"]/@value')[0].extract())
+        item['disable_board'] = int(Selector(text=response.body).xpath('//*[@id="num21_1"]/@value')[0].extract())
+        yield item
