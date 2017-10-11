@@ -26,6 +26,7 @@ class PlaceDataItem(scrapy.Item):
 
 # 设置
 class SettingItem(scrapy.Item):
+    channel = scrapy.Field()  # 渠道
     d_name = scrapy.Field()  # 设备编号
     device_id = scrapy.Field()  # 设备内部ID
     tag = scrapy.Field()  # 设备标签(渠道)

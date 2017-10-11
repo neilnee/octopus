@@ -34,11 +34,13 @@ class SettingSpider(CrawlSpider):
     }
     uid = ''
     pwd = ''
+    channel = ''
 
-    def __init__(self, uid='', pwd='', *args, **kwargs):
+    def __init__(self, uid='', pwd='', channel='', *args, **kwargs):
         super(SettingSpider, self).__init__(*args, **kwargs)
         self.uid = uid
         self.pwd = pwd
+        self.channel = channel
 
     def start_requests(self):
         return [Request("https://weimaqi.net/admin_mchm_new/login.html",
@@ -193,6 +195,7 @@ class SettingSpider(CrawlSpider):
     # noinspection PyMethodMayBeStatic,PyBroadException
     def handle_receivedata(self, response):
         item = SettingItem()
+        item['channel'] = self.channel
         item['device_id'] = response.meta['device_id']
         item['d_name'] = response.meta['d_name']
         item['tag'] = response.meta['tag']
@@ -313,6 +316,7 @@ class SettingSpider(CrawlSpider):
     # noinspection PyMethodMayBeStatic
     def unuseable_device(self, device_id='', d_name='', tag='', des=''):
         item = SettingItem()
+        item['channel'] = self.channel
         item['device_id'] = device_id
         item['d_name'] = d_name
         item['tag'] = tag
