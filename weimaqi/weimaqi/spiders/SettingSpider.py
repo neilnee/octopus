@@ -35,12 +35,61 @@ class SettingSpider(CrawlSpider):
     uid = ''
     pwd = ''
     channel = ''
+    full = True
+    setting_map = {}
+    item = SettingItem()
 
-    def __init__(self, uid='', pwd='', channel='', *args, **kwargs):
+    def __init__(self, uid='', pwd='', ch='', full=True, *args, **kwargs):
         super(SettingSpider, self).__init__(*args, **kwargs)
         self.uid = uid
         self.pwd = pwd
-        self.channel = channel
+        self.full = full
+        with open("../account.json") as account_file:
+            load_account = json.load(account_file)
+            for i in range(0, len(load_account)):
+                if load_account[i]['place'] == ch:
+                    self.channel = load_account[i]['name']
+                    break
+        with open("setting/setting_current.csv") as setting_file:
+            i = 0
+            for line in setting_file:
+                if i == 0:
+                    i = i + 1
+                    continue
+                i = i + 1
+                line = line.strip()
+                line_d = line.split(',')
+                item = SettingItem()
+                item['channel'] = str(line_d[0])
+                item['d_name'] = str(line_d[1])
+                item['device_id'] = str(line_d[2])
+                item['tag'] = str(line_d[3])
+                item['des'] = str(line_d[4])
+                item['online'] = str(line_d[5])
+                item['setting_param'] = int(line_d[6])
+                item['coin_per_time'] = int(line_d[7])
+                item['game_duration'] = int(line_d[8])
+                item['music'] = int(line_d[9])
+                item['air_pick'] = int(line_d[10])
+                item['out_pos'] = int(line_d[11])
+                item['shake_clear'] = int(line_d[12])
+                item['music_volume'] = int(line_d[13])
+                item['free_for_continue'] = int(line_d[14])
+                item['strong_force'] = int(line_d[15])
+                item['weak_force'] = int(line_d[16])
+                item['pick_height'] = int(line_d[17])
+                item['strong_to_weak'] = int(line_d[18])
+                item['line_height'] = int(line_d[19])
+                item['out_mode'] = int(line_d[20])
+                item['probability'] = int(line_d[21])
+                item['eyes'] = int(line_d[22])
+                item['keep'] = int(line_d[23])
+                item['account_clear'] = int(line_d[24])
+                item['reset'] = int(line_d[25])
+                item['disable_btn'] = int(line_d[26])
+                item['disable_board'] = int(line_d[27])
+                self.setting_map[item['device_id']] = item
+            print ('init finish: ' + str(len(self.setting_map)))
 
     def start_requests(self):
         return [Request("https://weimaqi.net/admin_mchm_new/login.html",
@@ -72,30 +121,38 @@ class SettingSpider(CrawlSpider):
     def handle_devices(self, response):
         setting_list = json.loads(re.search("\\'data\\':\\[.+", response.body).group()[7:-2])
         for i in range(0, len(setting_list)):
-            if setting_list[i]['online'] == '1':
-                yield scrapy.FormRequest(
-                    'https://weimaqi.net/admin_mchm_new/control/shebeisettingsHandler.ashx?action=getdatasid_load',
-                    method='POST',
-                    formdata={
-                        'id': setting_list[i]['device_id'],
-                        'num0_1': '3',
-                        'cid': '0',
-                        'settingsid': '63'
-                    },
-                    meta={
-                        'device_id': setting_list[i]['device_id'],
-                        'd_name': setting_list[i]['d_name'],
-                        'tag': setting_list[i]['tag'],
-                        'des': setting_list[i]['des']
-                    },
-                    callback=self.handle_datasidload,
-                    dont_filter=True)
+            item = None
+            if self.full == 'False' and setting_list[i]['device_id'] in self.setting_map.keys():
+                item = self.setting_map[setting_list[i]['device_id']]
+            if item and item.is_valid():
+                print ('1: found usable item')
+                yield item
             else:
-                print ('1: found unuseable device: ' + setting_list[i]['d_name'])
-                yield self.unuseable_device(setting_list[i]['device_id'],
-                                            setting_list[i]['d_name'],
-                                            setting_list[i]['tag'],
-                                            setting_list[i]['des'])
+                if setting_list[i]['online'] == '1':
+                    print ('1: get device setting: ' + setting_list[i]['d_name'])
+                    yield scrapy.FormRequest(
+                        'https://weimaqi.net/admin_mchm_new/control/shebeisettingsHandler.ashx?action=getdatasid_load',
+                        method='POST',
+                        formdata={
+                            'id': setting_list[i]['device_id'],
+                            'num0_1': '3',
+                            'cid': '0',
+                            'settingsid': '63'
+                        },
+                        meta={
+                            'device_id': setting_list[i]['device_id'],
+                            'd_name': setting_list[i]['d_name'],
+                            'tag': setting_list[i]['tag'],
+                            'des': setting_list[i]['des']
+                        },
+                        callback=self.handle_datasidload,
+                        dont_filter=True)
+                else:
+                    print ('1: found unuseable device: ' + setting_list[i]['d_name'])
+                    yield self.unuseable_device(setting_list[i]['device_id'],
+                                                setting_list[i]['d_name'],
+                                                setting_list[i]['tag'],
+                                                setting_list[i]['des'])
 
     def handle_datasidload(self, response):
         return [scrapy.FormRequest(
@@ -317,8 +374,8 @@ class SettingSpider(CrawlSpider):
     def unuseable_device(self, device_id='', d_name='', tag='', des=''):
         item = SettingItem()
         item['channel'] = self.channel
-        item['device_id'] = device_id
         item['d_name'] = d_name
+        item['device_id'] = device_id
         item['tag'] = tag
         item['des'] = des
         item['online'] = '离线'

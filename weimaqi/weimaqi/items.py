@@ -54,3 +54,27 @@ class SettingItem(scrapy.Item):
     reset = scrapy.Field()  # 恢复出厂 num19_1
     disable_btn = scrapy.Field()  # 禁止线下设置和免费钮 num20_1
     disable_board = scrapy.Field()  # 禁止主板运行 num21_1
+
+    def is_valid(self):
+        return int(self['setting_param']) != -1 \
+                and int(self['coin_per_time']) != -1 \
+                and int(self['game_duration']) != -1 \
+                and int(self['music']) != -1 \
+                and int(self['air_pick']) != -1 \
+                and int(self['out_pos']) != -1 \
+                and int(self['shake_clear']) != -1 \
+                and int(self['music_volume']) != -1 \
+                and int(self['free_for_continue']) != -1 \
+                and int(self['strong_force']) != -1 \
+                and int(self['weak_force']) != -1 \
+                and int(self['pick_height']) != -1 \
+                and int(self['strong_to_weak']) != -1 \
+                and int(self['line_height']) != -1 \
+                and int(self['out_mode']) != -1 \
+                and int(self['probability']) != -1 \
+                and int(self['eyes']) != -1 \
+                and int(self['keep']) != -1 \
+                and int(self['account_clear']) != -1 \
+                and int(self['reset']) != -1 \
+                and int(self['disable_btn']) != -1 \
+                and int(self['disable_board']) != -1
