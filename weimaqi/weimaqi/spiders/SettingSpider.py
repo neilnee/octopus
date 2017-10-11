@@ -1,3 +1,4 @@
+# coding=utf-8
 import hashlib
 import json
 import random
@@ -55,20 +56,20 @@ class SettingSpider(CrawlSpider):
                                           callback=self.check_info,
                                           dont_filter=True)]
 
+    # noinspection PyUnusedLocal
     def check_info(self, response):
         return [Request('https://weimaqi.net/admin_mchm_new/CheckInfo_m.aspx?r=' + str(random.random()),
                         callback=self.handle_check_info)]
 
+    # noinspection PyUnusedLocal
     def handle_check_info(self, response):
         return [Request('https://weimaqi.net/admin_mchm_new/control/Handler.ashx?action=device_mngt&_='
                         + str(long(time.time()) * 1000l),
                         callback=self.handle_devices)]
 
-    # noinspection PyMethodMayBeStatic
     def handle_devices(self, response):
         setting_list = json.loads(re.search("\\'data\\':\\[.+", response.body).group()[7:-2])
         for i in range(0, len(setting_list)):
-            print (setting_list[i]['device_id'] + ';' + setting_list[i]['d_name'])
             if setting_list[i]['online'] == '1':
                 yield scrapy.FormRequest(
                     'https://weimaqi.net/admin_mchm_new/control/shebeisettingsHandler.ashx?action=getdatasid_load',
@@ -79,9 +80,20 @@ class SettingSpider(CrawlSpider):
                         'cid': '0',
                         'settingsid': '63'
                     },
-                    meta={'device_id': setting_list[i]['device_id']},
+                    meta={
+                        'device_id': setting_list[i]['device_id'],
+                        'd_name': setting_list[i]['d_name'],
+                        'tag': setting_list[i]['tag'],
+                        'des': setting_list[i]['des']
+                    },
                     callback=self.handle_datasidload,
                     dont_filter=True)
+            else:
+                print ('1: found unuseable device: ' + setting_list[i]['d_name'])
+                yield self.unuseable_device(setting_list[i]['device_id'],
+                                            setting_list[i]['d_name'],
+                                            setting_list[i]['tag'],
+                                            setting_list[i]['des'])
 
     def handle_datasidload(self, response):
         return [scrapy.FormRequest(
@@ -94,11 +106,13 @@ class SettingSpider(CrawlSpider):
                 'settingsid': '63'
             },
             meta={
-                'device_id': response.meta['device_id']
+                'device_id': response.meta['device_id'],
+                'd_name': response.meta['d_name'],
+                'tag': response.meta['tag'],
+                'des': response.meta['des']
             },
             callback=self.handle_setting,
             dont_filter=True)]
-        pass
 
     def handle_setting(self, response):
         data = json.loads(response.body)
@@ -109,9 +123,18 @@ class SettingSpider(CrawlSpider):
                 method='GET',
                 meta={
                     'receiveid': data[0]['receiveid'],
-                    'device_id': response.meta['device_id']
+                    'device_id': response.meta['device_id'],
+                    'd_name': response.meta['d_name'],
+                    'tag': response.meta['tag'],
+                    'des': response.meta['des']
                 },
                 callback=self.handle_state)]
+        else:
+            print ('2: found unuseable device: ' + response.meta['d_name'])
+            return self.unuseable_device(response.meta['device_id'],
+                                         response.meta['d_name'],
+                                         response.meta['tag'],
+                                         response.meta['des'])
 
     def handle_state(self, response):
         data = json.loads(response.body)
@@ -126,11 +149,20 @@ class SettingSpider(CrawlSpider):
                     'settingsid': '63'
                 },
                 meta={
-                    'device_id': response.meta['device_id']
+                    'device_id': response.meta['device_id'],
+                    'd_name': response.meta['d_name'],
+                    'tag': response.meta['tag'],
+                    'des': response.meta['des']
                 },
                 callback=self.handle_datas,
                 dont_filter=True
             )]
+        else:
+            print ('3: found unuseable device: ' + response.meta['d_name'])
+            return self.unuseable_device(response.meta['device_id'],
+                                         response.meta['d_name'],
+                                         response.meta['tag'],
+                                         response.meta['des'])
 
     def handle_datas(self, response):
         sn = re.search("GetDataed\\('.+',", response.body).group()[11:-2]
@@ -143,35 +175,169 @@ class SettingSpider(CrawlSpider):
                     'h_tid': '63'
                 },
                 meta={
-                    'device_id': response.meta['device_id']
+                    'device_id': response.meta['device_id'],
+                    'd_name': response.meta['d_name'],
+                    'tag': response.meta['tag'],
+                    'des': response.meta['des']
                 },
                 callback=self.handle_receivedata,
                 dont_filter=True
             )]
+        else:
+            print ('4: found unuseable device: ' + response.meta['d_name'])
+            return self.unuseable_device(response.meta['device_id'],
+                                         response.meta['d_name'],
+                                         response.meta['tag'],
+                                         response.meta['des'])
 
-    # noinspection PyMethodMayBeStatic
+    # noinspection PyMethodMayBeStatic,PyBroadException
     def handle_receivedata(self, response):
         item = SettingItem()
-        item['setting_param'] = int(Selector(text=response.body).xpath('//*[@id="num0_1"]/@value')[0].extract())
-        item['coin_per_time'] = int(Selector(text=response.body).xpath('//*[@id="num1_1"]/@value')[0].extract())
-        item['game_duration'] = int(Selector(text=response.body).xpath('//*[@id="num2_1"]/@value')[0].extract())
-        item['music'] = int(Selector(text=response.body).xpath('//*[@id="num3_1"]/@value')[0].extract())
-        item['air_pick'] = int(Selector(text=response.body).xpath('//*[@id="num4_1"]/@value')[0].extract())
-        item['out_pos'] = int(Selector(text=response.body).xpath('//*[@id="num5_1"]/@value')[0].extract())
-        item['shake_clear'] = int(Selector(text=response.body).xpath('//*[@id="num6_1"]/@value')[0].extract())
-        item['music_volume'] = int(Selector(text=response.body).xpath('//*[@id="num7_1"]/@value')[0].extract())
-        item['free_for_continue'] = int(Selector(text=response.body).xpath('//*[@id="num8_1"]/@value')[0].extract())
-        item['strong_force'] = int(Selector(text=response.body).xpath('//*[@id="num9_1"]/@value')[0].extract())
-        item['weak_force'] = int(Selector(text=response.body).xpath('//*[@id="num10_1"]/@value')[0].extract())
-        item['pick_height'] = int(Selector(text=response.body).xpath('//*[@id="num11_1"]/@value')[0].extract())
-        item['strong_to_weak'] = int(Selector(text=response.body).xpath('//*[@id="num12_1"]/@value')[0].extract())
-        item['line_height'] = int(Selector(text=response.body).xpath('//*[@id="num13_1"]/@value')[0].extract())
-        item['out_mode'] = int(Selector(text=response.body).xpath('//*[@id="num14_1"]/@value')[0].extract())
-        item['probability'] = int(Selector(text=response.body).xpath('//*[@id="num15_1"]/@value')[0].extract())
-        item['eyes'] = int(Selector(text=response.body).xpath('//*[@id="num16_1"]/@value')[0].extract())
-        item['keep'] = int(Selector(text=response.body).xpath('//*[@id="num17_1"]/@value')[0].extract())
-        item['account_clear'] = int(Selector(text=response.body).xpath('//*[@id="num18_1"]/@value')[0].extract())
-        item['reset'] = int(Selector(text=response.body).xpath('//*[@id="num19_1"]/@value')[0].extract())
-        item['disable_btn'] = int(Selector(text=response.body).xpath('//*[@id="num20_1"]/@value')[0].extract())
-        item['disable_board'] = int(Selector(text=response.body).xpath('//*[@id="num21_1"]/@value')[0].extract())
+        item['device_id'] = response.meta['device_id']
+        item['d_name'] = response.meta['d_name']
+        item['tag'] = response.meta['tag']
+        item['des'] = response.meta['des']
+        item['online'] = '在线'
+        try:
+            item['setting_param'] = int(Selector(text=response.body).xpath('//*[@id="num0_1"]/@value')[0].extract())
+        except Exception:
+            item['setting_param'] = -1
+
+        try:
+            item['coin_per_time'] = int(Selector(text=response.body).xpath('//*[@id="num1_1"]/@value')[0].extract())
+        except Exception:
+            item['coin_per_time'] = -1
+
+        try:
+            item['game_duration'] = int(Selector(text=response.body).xpath('//*[@id="num2_1"]/@value')[0].extract())
+        except Exception:
+            item['game_duration'] = -1
+
+        try:
+            item['music'] = int(Selector(text=response.body).xpath('//*[@id="num3_1"]/@value')[0].extract())
+        except Exception:
+            item['music'] = -1
+
+        try:
+            item['air_pick'] = int(Selector(text=response.body).xpath('//*[@id="num4_1"]/@value')[0].extract())
+        except Exception:
+            item['air_pick'] = -1
+
+        try:
+            item['out_pos'] = int(Selector(text=response.body).xpath('//*[@id="num5_1"]/@value')[0].extract())
+        except Exception:
+            item['out_pos'] = -1
+
+        try:
+            item['shake_clear'] = int(Selector(text=response.body).xpath('//*[@id="num6_1"]/@value')[0].extract())
+        except Exception:
+            item['shake_clear'] = -1
+
+        try:
+            item['music_volume'] = int(Selector(text=response.body).xpath('//*[@id="num7_1"]/@value')[0].extract())
+        except Exception:
+            item['music_volume'] = -1
+
+        try:
+            item['free_for_continue'] = int(Selector(text=response.body).xpath('//*[@id="num8_1"]/@value')[0].extract())
+        except Exception:
+            item['free_for_continue'] = -1
+
+        try:
+            item['strong_force'] = int(Selector(text=response.body).xpath('//*[@id="num9_1"]/@value')[0].extract())
+        except Exception:
+            item['strong_force'] = -1
+
+        try:
+            item['weak_force'] = int(Selector(text=response.body).xpath('//*[@id="num10_1"]/@value')[0].extract())
+        except Exception:
+            item['weak_force'] = -1
+
+        try:
+            item['pick_height'] = int(Selector(text=response.body).xpath('//*[@id="num11_1"]/@value')[0].extract())
+        except Exception:
+            item['pick_height'] = -1
+
+        try:
+            item['strong_to_weak'] = int(Selector(text=response.body).xpath('//*[@id="num12_1"]/@value')[0].extract())
+        except Exception:
+            item['strong_to_weak'] = -1
+
+        try:
+            item['line_height'] = int(Selector(text=response.body).xpath('//*[@id="num13_1"]/@value')[0].extract())
+        except Exception:
+            item['line_height'] = -1
+
+        try:
+            item['out_mode'] = int(Selector(text=response.body).xpath('//*[@id="num14_1"]/@value')[0].extract())
+        except Exception:
+            item['out_mode'] = -1
+
+        try:
+            item['probability'] = int(Selector(text=response.body).xpath('//*[@id="num15_1"]/@value')[0].extract())
+        except Exception:
+            item['probability'] = -1
+
+        try:
+            item['eyes'] = int(Selector(text=response.body).xpath('//*[@id="num16_1"]/@value')[0].extract())
+        except Exception:
+            item['eyes'] = -1
+
+        try:
+            item['keep'] = int(Selector(text=response.body).xpath('//*[@id="num17_1"]/@value')[0].extract())
+        except Exception:
+            item['keep'] = -1
+
+        try:
+            item['account_clear'] = int(Selector(text=response.body).xpath('//*[@id="num18_1"]/@value')[0].extract())
+        except Exception:
+            item['account_clear'] = -1
+
+        try:
+            item['reset'] = int(Selector(text=response.body).xpath('//*[@id="num19_1"]/@value')[0].extract())
+        except Exception:
+            item['reset'] = -1
+
+        try:
+            item['disable_btn'] = int(Selector(text=response.body).xpath('//*[@id="num20_1"]/@value')[0].extract())
+        except Exception:
+            item['disable_btn'] = -1
+
+        try:
+            item['disable_board'] = int(Selector(text=response.body).xpath('//*[@id="num21_1"]/@value')[0].extract())
+        except Exception:
+            item['disable_board'] = -1
+
         yield item
+
+    # noinspection PyMethodMayBeStatic
+    def unuseable_device(self, device_id='', d_name='', tag='', des=''):
+        item = SettingItem()
+        item['device_id'] = device_id
+        item['d_name'] = d_name
+        item['tag'] = tag
+        item['des'] = des
+        item['online'] = '离线'
+        item['setting_param'] = -1
+        item['coin_per_time'] = -1
+        item['game_duration'] = -1
+        item['music'] = -1
+        item['air_pick'] = -1
+        item['out_pos'] = -1
+        item['shake_clear'] = -1
+        item['music_volume'] = -1
+        item['free_for_continue'] = -1
+        item['strong_force'] = -1
+        item['weak_force'] = -1
+        item['pick_height'] = -1
+        item['strong_to_weak'] = -1
+        item['line_height'] = -1
+        item['out_mode'] = -1
+        item['probability'] = -1
+        item['eyes'] = -1
+        item['keep'] = -1
+        item['account_clear'] = -1
+        item['reset'] = -1
+        item['disable_btn'] = -1
+        item['disable_board'] = -1
+        return item

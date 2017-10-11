@@ -26,6 +26,11 @@ class PlaceDataItem(scrapy.Item):
 
 # 设置
 class SettingItem(scrapy.Item):
+    d_name = scrapy.Field()  # 设备编号
+    device_id = scrapy.Field()  # 设备内部ID
+    tag = scrapy.Field()  # 设备标签(渠道)
+    des = scrapy.Field()  # 设备备注
+    online = scrapy.Field()  # 是否在线,
     setting_param = scrapy.Field()  # 设置参数 num0_1
     coin_per_time = scrapy.Field()  # 几投一玩 num1_1
     game_duration = scrapy.Field()  # 游戏时间 num2_1

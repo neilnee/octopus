@@ -1,23 +1,39 @@
 import json
 
-import datetime
+import time
+from multiprocessing import Process
+
 from scrapy import cmdline
 
 
-def getyesterday():
-    today = datetime.date.today()
-    oneday = datetime.timedelta(days=1)
-    return today - oneday
+class SpiderProcess(Process):
+    def __init__(self, cmd):
+        Process.__init__(self)
+        self.cmd = cmd
+
+    def run(self):
+        print 'setting spider process execute'
+        cmdline.execute(self.cmd)
 
 
-with open("../account.json") as account_file:
-    load_account = json.load(account_file)
-    yesterday = str(getyesterday())
-    cmdline.execute(('scrapy crawl setting -a uid='
-                     + str(load_account[2]['uid'])
-                     + ' -a pwd='
-                     + str(load_account[2]['pwd'])
-                     + ' -o '
-                     + 'setting/setting' + '_' + yesterday + '_' + str(load_account[2]['place'])
-                     + '.csv').split())
-    account_file.close()
+if __name__ == '__main__':
+    cmds = []
+    with open("../account.json") as account_file:
+        load_account = json.load(account_file)
+        now = time.strftime("%Y-%m-%d[%H:%M:%S]", time.localtime())
+        for i in range(0, len(load_account)):
+            cmds.append(('scrapy crawl setting -a uid='
+                         + str(load_account[i]['uid'])
+                         + ' -a pwd='
+                         + str(load_account[i]['pwd'])
+                         + ' -o '
+                         + 'setting/setting' + '_' + now + '_' + str(load_account[i]['place'])
+                         + '.csv').split())
+        account_file.close()
+    for c in cmds:
+        p = SpiderProcess(c)
+        p.daemon = True
+        p.start()
+        p.join()
+
+    print 'setting spider execute finish'

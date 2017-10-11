@@ -109,6 +109,11 @@ FIELDS_TO_EXPORT_REVENUE = [
 ]
 
 FIELDS_TO_EXPORT_SETTING = [
+    'd_name',
+    'device_id',
+    'tag',
+    'des',
+    'online',
     'setting_param',
     'coin_per_time',
     'game_duration',

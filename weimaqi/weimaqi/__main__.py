@@ -19,7 +19,7 @@ class SpiderProcess(Process):
         self.cmd = cmd
 
     def run(self):
-        print 'process execute'
+        print 'main spider process execute'
         cmdline.execute(self.cmd)
 
 
@@ -50,4 +50,4 @@ if __name__ == '__main__':
         p.start()
         p.join()
 
-    print 'spider execute finish'
+    print 'main spider execute finish'

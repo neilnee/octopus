@@ -3,6 +3,8 @@ import hashlib
 import json
 import random
 
+import datetime
+import time
 from scrapy import cmdline
 
 # 测试读取排除场地信息
@@ -29,3 +31,5 @@ from scrapy import cmdline
 #                     + ' -a pwd='
 #                     + str(load_account[2]['pwd'])).split())
 #     account_file.close()
+
+print (datetime)
