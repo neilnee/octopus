@@ -1,7 +1,7 @@
 .idea/
 *.csv
-catchme/catchme/account.json
-catchme/catchme/place.json
+catchme/account.json
+catchme/place.json
 catchme/catchme/setting/
 catchme/catchme/revenue/
 .DS_Store
