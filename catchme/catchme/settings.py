@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Scrapy settings for weimaqi project
+# Scrapy settings for catchme project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -9,14 +9,14 @@
 #     http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 #     http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
 
-BOT_NAME = 'weimaqi'
+BOT_NAME = 'catchme'
 
-SPIDER_MODULES = ['weimaqi.spiders']
-NEWSPIDER_MODULE = 'weimaqi.spiders'
+SPIDER_MODULES = ['catchme.spiders']
+NEWSPIDER_MODULE = 'catchme.spiders'
 
 
 # Crawl responsibly by identifying yourself (and your website) on the user-agent
-#USER_AGENT = 'weimaqi (+http://www.yourdomain.com)'
+#USER_AGENT = 'catchme (+http://www.yourdomain.com)'
 
 # Obey robots.txt rules
 ROBOTSTXT_OBEY = True
@@ -47,13 +47,13 @@ DOWNLOAD_DELAY = 1
 # Enable or disable spider middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/spider-middleware.html
 #SPIDER_MIDDLEWARES = {
-#    'weimaqi.middlewares.WeimaqiSpiderMiddleware': 543,
+#    'catchme.middlewares.WeimaqiSpiderMiddleware': 543,
 #}
 
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 #DOWNLOADER_MIDDLEWARES = {
-#    'weimaqi.middlewares.MyCustomDownloaderMiddleware': 543,
+#    'catchme.middlewares.MyCustomDownloaderMiddleware': 543,
 #}
 
 # Enable or disable extensions
@@ -65,7 +65,7 @@ DOWNLOAD_DELAY = 1
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 #ITEM_PIPELINES = {
-#    'weimaqi.pipelines.WeimaqiPipeline': 300,
+#    'catchme.pipelines.WeimaqiPipeline': 300,
 #}
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -90,7 +90,7 @@ DOWNLOAD_DELAY = 1
 #HTTPCACHE_STORAGE = 'scrapy.extensions.httpcache.FilesystemCacheStorage'
 
 FEED_EXPORTERS = {
-    'csv': 'weimaqi.spiders.csv_item_exporter.WeimaqiCsvItemExporter',
+    'csv': 'catchme.spiders.csv_item_exporter.WeimaqiCsvItemExporter',
 }
 
 FIELDS_TO_EXPORT_REVENUE = [

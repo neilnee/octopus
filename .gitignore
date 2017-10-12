@@ -1,7 +1,7 @@
 .idea/
 *.csv
-weimaqi/account.json
-weimaqi/place.json
-weimaqi/weimaqi/setting/
-weimaqi/weimaqi/revenue/
+catchme/catchme/account.json
+catchme/catchme/place.json
+catchme/catchme/setting/
+catchme/catchme/revenue/
 .DS_Store
