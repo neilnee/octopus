@@ -37,7 +37,6 @@ class SettingSpider(CrawlSpider):
     channel = ''
     full = True
     setting_map = {}
-    item = SettingItem()
 
     def __init__(self, uid='', pwd='', ch='', full=True, *args, **kwargs):
         super(SettingSpider, self).__init__(*args, **kwargs)
