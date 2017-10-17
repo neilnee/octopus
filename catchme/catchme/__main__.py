@@ -19,7 +19,7 @@ class SpiderProcess(Process):
         cmdline.execute(self.cmd)
 
 
-class InCludeChannel:
+class IncludeChannel:
     ch_code = ''
     ch_key = ''
     channels = []
@@ -38,6 +38,7 @@ class InCludeChannel:
     def append_weimaqi_data(self, input_line):
         self.revenue_wmq.append(input_line)
 
+    # noinspection PyBroadException
     def append_catchme_data(self, input_line):
         place_key = md5(input_line[2], False)
         if place_key in self.revenue.keys():
@@ -99,10 +100,10 @@ def getyesterday():
 
 def load_weimaqi(input_file, ch_item):
     with open(input_file) as wmq_file:
-        i = 0
+        idx = 0
         for l in wmq_file:
-            i = i + 1
-            if i == 1:
+            idx = idx + 1
+            if idx == 1:
                 continue
             l = l.strip()
             l = l.replace('\r\n', '')
@@ -120,7 +121,7 @@ if __name__ == '__main__':
             if len(ch['include']) > 0:
                 for i in ch['include']:
                     place.append(md5(i))
-            includes[c_key] = InCludeChannel(ch['code'], c_key, place, int(ch['cpt']))
+            includes[c_key] = IncludeChannel(ch['code'], c_key, place, int(ch['cpt']))
 
     cmds = []
     with open("../account.json") as account_file:
