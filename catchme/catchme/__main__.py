@@ -2,6 +2,7 @@
 import csv
 import hashlib
 import json
+import time
 
 import datetime
 from multiprocessing import Process
@@ -22,33 +23,47 @@ class SpiderProcess(Process):
 class IncludeChannel:
     ch_code = ''
     ch_key = ''
-    channels = []
+    places = []
     revenue = {}
     revenue_wmq = []
     cpt = 2
 
-    def __init__(self, ch_code, ch_key, channels, cpt=2):
-        self.ch_code = ch_code
-        self.ch_key = ch_key
-        self.channels = channels
+    def __init__(self, channel_info, ysd):
+        self.ch_code = channel_info['code']
+        self.ch_key = md5(channel_info['name'])
+        self.cpt = int(ch['cpt'])
+        self.places = []
         self.revenue = {}
-        self.cpt = cpt
         self.revenue_wmq = []
+        if len(channel_info['include']) > 0:
+            for p in channel_info['include']:
+                if time.strptime(ysd, '%Y-%m-%d') >= time.strptime(p['start'], '%Y-%m-%d'):
+                    place_key = md5(p['name'])
+                    self.places.append(place_key)
+                    self.revenue[place_key] = [0] * 12
+                    self.revenue[place_key][0] = str(p['name'].encode('utf-8'))
+                    self.revenue[place_key][11] = int(p['disable'])
+                    if p['start'] == ysd:
+                        self.revenue[place_key][1] = -float(p['test_income'])
+                        self.revenue[place_key][3] = -float(p['test_income']) + float(p['test_cost'])
+                        self.revenue[place_key][6] = -float(p['test_gift'])
+                        self.revenue[place_key][9] = -float(p['test_play'])
+                        self.revenue[place_key][7] = -int(p['test_play'] * self.cpt)
 
     def append_weimaqi_data(self, input_line):
         self.revenue_wmq.append(input_line)
 
     # noinspection PyBroadException
     def append_catchme_data(self, input_line):
-        place_key = md5(input_line[2], False)
+        place_key = md5(str(input_line[2]).strip(), False)
         if place_key in self.revenue.keys():
             revenue_line = self.revenue[place_key]
             revenue_line[1] += float(input_line[6])
             revenue_line[3] += float(input_line[6]) - float(input_line[9])
             revenue_line[6] += int(input_line[8])
-            revenue_line[7] += int(input_line[7]) / self.cpt
-            revenue_line[8] = 0
             revenue_line[9] += int(input_line[7])
+            revenue_line[7] += int(input_line[7]) * self.cpt
+            revenue_line[8] = 0
             try:
                 revenue_line[5] = float(revenue_line[6]) / float(revenue_line[9])
             except Exception:
@@ -59,26 +74,6 @@ class IncludeChannel:
                 revenue_line[11] += 1
             revenue_line[2] = float(revenue_line[1]) / (revenue_line[10] + revenue_line[11])
             revenue_line[4] = revenue_line[3] / (revenue_line[10] + revenue_line[11])
-        else:
-            revenue_line = [0] * 12
-            revenue_line[0] = str(input_line[2])
-            revenue_line[1] = float(input_line[6])
-            revenue_line[3] = float(input_line[6]) - float(input_line[9])
-            try:
-                revenue_line[5] = float(input_line[8]) / float(input_line[7])
-            except Exception:
-                revenue_line[5] = 0.0
-            revenue_line[6] = int(input_line[8])
-            revenue_line[7] = int(input_line[7]) / self.cpt
-            revenue_line[8] = 0
-            revenue_line[9] = int(input_line[7])
-            if input_line[12]:
-                revenue_line[10] = 1
-            else:
-                revenue_line[11] = 1
-            revenue_line[2] = float(input_line[6]) / (revenue_line[10] + revenue_line[11])
-            revenue_line[4] = revenue_line[3] / (revenue_line[10] + revenue_line[11])
-            self.revenue[place_key] = revenue_line
 
 
 # 加载catchme数据时需要包含的渠道场地
@@ -93,6 +88,7 @@ def md5(input_str, encode=True):
 
 
 def getyesterday():
+    # return '2017-10-20'
     today = datetime.date.today()
     oneday = datetime.timedelta(days=1)
     return today - oneday
@@ -116,12 +112,8 @@ if __name__ == '__main__':
     with open("../channel.json") as ch_file:
         load_ch = json.load(ch_file)
         for ch in load_ch:
-            c_key = md5(ch['name'])
-            place = []
-            if len(ch['include']) > 0:
-                for i in ch['include']:
-                    place.append(md5(i))
-            includes[c_key] = IncludeChannel(ch['code'], c_key, place, int(ch['cpt']))
+            if ch['name']:
+                includes[md5(ch['name'])] = IncludeChannel(ch, yesterday)
 
     cmds = []
     with open("../account.json") as account_file:
@@ -155,8 +147,8 @@ if __name__ == '__main__':
             line_list = line.split(',')
             c_key = md5(line_list[1], False)
             if c_key in includes.keys():
-                p_key = md5(line_list[2], False)
-                if p_key in includes[c_key].channels:
+                p_key = md5(str(line_list[2]).strip(), False)
+                if p_key in includes[c_key].places:
                     includes[c_key].append_catchme_data(line_list)
 
     load_weimaqi('revenue/weimaqi/revenue_' + yesterday + '_yl.csv', includes[md5('耀莱', False)])
