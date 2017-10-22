@@ -27,6 +27,7 @@ class IncludeChannel:
     revenue = {}
     revenue_wmq = []
     cpt = 2
+    revenue_cvt = {}
 
     def __init__(self, channel_info, ysd):
         self.ch_code = channel_info['code']
@@ -35,23 +36,46 @@ class IncludeChannel:
         self.places = []
         self.revenue = {}
         self.revenue_wmq = []
+        self.revenue_cvt = {}
         if len(channel_info['include']) > 0:
-            for p in channel_info['include']:
-                if time.strptime(ysd, '%Y-%m-%d') >= time.strptime(p['start'], '%Y-%m-%d'):
-                    place_key = md5(p['name'])
+            for place in channel_info['include']:
+                if time.strptime(ysd, '%Y-%m-%d') >= time.strptime(place['start'], '%Y-%m-%d'):
+                    place_key = md5(place['name'])
                     self.places.append(place_key)
                     self.revenue[place_key] = [0] * 12
-                    self.revenue[place_key][0] = str(p['name'].encode('utf-8'))
-                    self.revenue[place_key][11] = int(p['disable'])
-                    if p['start'] == ysd:
-                        self.revenue[place_key][1] = -float(p['test_income'])
-                        self.revenue[place_key][3] = -float(p['test_income']) + float(p['test_cost'])
-                        self.revenue[place_key][6] = -float(p['test_gift'])
-                        self.revenue[place_key][9] = -float(p['test_play'])
-                        self.revenue[place_key][7] = -int(p['test_play'] * self.cpt)
+                    self.revenue[place_key][0] = str(place['name'].encode('utf-8'))
+                    self.revenue[place_key][11] = int(place['disable'])
+                    if place['start'] == ysd:
+                        self.revenue[place_key][1] = -float(place['test_income'])
+                        self.revenue[place_key][3] = -float(place['test_income']) + float(place['test_cost'])
+                        self.revenue[place_key][6] = -float(place['test_gift'])
+                        self.revenue[place_key][9] = -float(place['test_play'])
+                        self.revenue[place_key][7] = -int(place['test_play'] * self.cpt)
+                    ori_key = md5(place['original'])
+                    self.revenue_cvt[ori_key] = place_key
 
     def append_weimaqi_data(self, input_line):
-        self.revenue_wmq.append(input_line)
+        ori_key = md5(input_line[0], False)
+        if ori_key in self.revenue_cvt.keys() and self.revenue_cvt[ori_key] in self.revenue.keys():
+            revenue_line = self.revenue[self.revenue_cvt[ori_key]]
+            revenue_line[1] += float(input_line[1])
+            revenue_line[3] += float(input_line[3])
+            revenue_line[6] += int(input_line[6])
+            revenue_line[9] += int(input_line[9])
+            revenue_line[7] += int(input_line[7]) * self.cpt
+            revenue_line[8] += int(input_line[8])
+            # noinspection PyBroadException
+            try:
+                revenue_line[5] = float(revenue_line[6]) / float(revenue_line[9])
+            except Exception:
+                revenue_line[5] = 0.0
+            if int(revenue_line[10]) == 0 and int(revenue_line[11]) == 0:
+                revenue_line[10] = int(input_line[10])
+                revenue_line[11] = int(input_line[11])
+            revenue_line[2] = float(revenue_line[1]) / (revenue_line[10] + revenue_line[11])
+            revenue_line[4] = revenue_line[3] / (revenue_line[10] + revenue_line[11])
+        else:
+            self.revenue_wmq.append(input_line)
 
     def append_catchme_data(self, input_line):
         place_key = md5(str(input_line[2]).strip(), False)
@@ -88,7 +112,6 @@ def md5(input_str, encode=True):
 
 
 def getyesterday():
-    # return '2017-10-19'
     today = datetime.date.today()
     oneday = datetime.timedelta(days=1)
     return today - oneday
