@@ -23,7 +23,7 @@ if __name__ == '__main__':
     full = False
     with open("../account.json") as account_file:
         load_account = json.load(account_file)
-        now = time.strftime("%Y-%m-%d[%H:%M:%S]", time.localtime())
+        now = time.strftime("%Y-%m-%d[%H-%M-%S]", time.localtime())
         for i in range(0, len(load_account)):
             cmds.append(('scrapy crawl setting -a uid='
                          + str(load_account[i]['uid'])
