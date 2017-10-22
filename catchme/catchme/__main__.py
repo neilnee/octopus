@@ -53,7 +53,6 @@ class IncludeChannel:
     def append_weimaqi_data(self, input_line):
         self.revenue_wmq.append(input_line)
 
-    # noinspection PyBroadException
     def append_catchme_data(self, input_line):
         place_key = md5(str(input_line[2]).strip(), False)
         if place_key in self.revenue.keys():
@@ -64,6 +63,7 @@ class IncludeChannel:
             revenue_line[9] += int(input_line[7])
             revenue_line[7] += int(input_line[7]) * self.cpt
             revenue_line[8] = 0
+            # noinspection PyBroadException
             try:
                 revenue_line[5] = float(revenue_line[6]) / float(revenue_line[9])
             except Exception:
@@ -88,7 +88,7 @@ def md5(input_str, encode=True):
 
 
 def getyesterday():
-    # return '2017-10-20'
+    # return '2017-10-19'
     today = datetime.date.today()
     oneday = datetime.timedelta(days=1)
     return today - oneday
@@ -123,7 +123,7 @@ if __name__ == '__main__':
                         + str(load_account[i]['uid'])
                         + ' -a pwd='
                         + str(load_account[i]['pwd'])
-                        + ' -a yestoday='
+                        + ' -a yesterday='
                         + yesterday
                         + ' -a price=12'
                         + ' -a ch='

@@ -3,7 +3,9 @@ import hashlib
 import json
 import re
 
+import datetime
 import scrapy
+import time
 from scrapy import FormRequest, Request
 from scrapy.spiders import CrawlSpider
 
@@ -16,6 +18,12 @@ def is_number(s):
         return True
     except ValueError:
         pass
+
+
+def getyesterday():
+    today = datetime.date.today()
+    oneday = datetime.timedelta(days=1)
+    return today - oneday
 
 
 class WeimaqiSpide(CrawlSpider):
@@ -45,23 +53,31 @@ class WeimaqiSpide(CrawlSpider):
     exclude = []
     cpt = 2
 
-    def __init__(self, uid='', pwd='', yestoday='', price=12, ch='', cpt=2, *args, **kwargs):
+    def __init__(self, uid='', pwd='', yesterday='', price=12, ch='', cpt=2, *args, **kwargs):
         super(WeimaqiSpide, self).__init__(*args, **kwargs)
         self.uid = uid
         self.pwd = pwd
-        self.yesterday = yestoday
+        self.yesterday = yesterday
         self.price = float(price)
         self.cpt = int(cpt)
         if not ch == '':
-            with open("../place.json") as place_file:
-                place = json.load(place_file)
-                place_list = place[ch]
-                if len(place_list) > 0:
-                    for p in place_list:
-                        self.exclude.append(hashlib.md5(p.encode('utf-8')).hexdigest())
-                place_file.close()
+            with open("../channel.json") as channel_file:
+                ch_list = json.load(channel_file)
+                for ch_info in ch_list:
+                    if ch_info['code'] == ch:
+                        if len(ch_info['include']) > 0:
+                            for place in ch_info['include']:
+                                if time.strptime(self.yesterday, '%Y-%m-%d') > time.strptime(place['start'], '%Y-%m-%d'):
+                                    print (ch + ' exclude ' + place['original'])
+                                    self.exclude.append(hashlib.md5(place['original'].encode('utf-8')).hexdigest())
+                        if len(ch_info['exclude']) > 0:
+                            for place in ch_info['exclude']:
+                                print (ch + ' exclude ' + place)
+                                self.exclude.append(hashlib.md5(place.encode('utf-8')).hexdigest())
+                        break
+                channel_file.close()
 
-        print ('uid=' + uid + '; pwd=' + pwd + "; yestoday=" + yestoday + "; price=" + str(price)
+        print ('uid=' + uid + '; pwd=' + pwd + "; yesterday=" + self.yesterday + "; price=" + str(price)
                + "\n exclude place :\n" + str(self.exclude))
 
     def start_requests(self):
@@ -86,22 +102,41 @@ class WeimaqiSpide(CrawlSpider):
     def handle_check_person(self, response):
         (event_agent, event_argument, view_state, view_state_navigator, event_validation) = self.read_hiddens(response)
         # 读取昨日数据
-        return [FormRequest.from_response(response,
-                                          url="https://weimaqi.net/admin_mch_new/baobiao/turnoverStat.aspx",
-                                          method='POST',
-                                          formdata={
-                                              '__EVENTTARGET': event_agent,
-                                              '__EVENTARGUMENT': event_argument,
-                                              '__VIEWSTATE': view_state,
-                                              '__VIEWSTATEGENERATOR': view_state_navigator,
-                                              '__EVENTVALIDATION': event_validation,
-                                              'ctl00$ContentPlaceHolder1$txtDateStart': self.yesterday,
-                                              'ctl00$ContentPlaceHolder1$txtDateEnd': self.yesterday,
-                                              'ctl00$ContentPlaceHolder1$btnYesterday': '昨日',
-                                              'GridView1_length': '100'
-                                          },
-                                          callback=self.start_read_data,
-                                          dont_filter=True)]
+        if self.yesterday == getyesterday():
+            return [FormRequest.from_response(response,
+                                              url="https://weimaqi.net/admin_mch_new/baobiao/turnoverStat.aspx",
+                                              method='POST',
+                                              formdata={
+                                                  '__EVENTTARGET': event_agent,
+                                                  '__EVENTARGUMENT': event_argument,
+                                                  '__VIEWSTATE': view_state,
+                                                  '__VIEWSTATEGENERATOR': view_state_navigator,
+                                                  '__EVENTVALIDATION': event_validation,
+                                                  'ctl00$ContentPlaceHolder1$txtDateStart': self.yesterday,
+                                                  'ctl00$ContentPlaceHolder1$txtDateEnd': self.yesterday,
+                                                  'ctl00$ContentPlaceHolder1$btnYesterday': '昨日',
+                                                  'GridView1_length': '100'
+                                              },
+                                              callback=self.start_read_data,
+                                              dont_filter=True)]
+        else:
+            return [FormRequest.from_response(response,
+                                              url="https://weimaqi.net/admin_mch_new/baobiao/turnoverStat.aspx",
+                                              method='POST',
+                                              formdata={
+                                                  '__EVENTTARGET': event_agent,
+                                                  '__EVENTARGUMENT': event_argument,
+                                                  '__VIEWSTATE': view_state,
+                                                  '__VIEWSTATEGENERATOR': view_state_navigator,
+                                                  '__EVENTVALIDATION': event_validation,
+                                                  'ctl00$ContentPlaceHolder1$txtDateStart': self.yesterday,
+                                                  'ctl00$ContentPlaceHolder1$txtDateEnd': self.yesterday,
+                                                  'ctl00$ContentPlaceHolder1$btnSetDatePeriod': '設置',
+                                                  'GridView1_length': '100'
+                                              },
+                                              callback=self.start_read_data,
+                                              dont_filter=True)]
+
 
     def start_read_data(self, response):
         (event_agent, event_argument, view_state, view_state_navigator, event_validation) = self.read_hiddens(response)
