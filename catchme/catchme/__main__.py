@@ -1,4 +1,5 @@
 # coding=utf-8
+import calendar
 import csv
 import hashlib
 import json
@@ -28,6 +29,8 @@ class IncludeChannel:
     revenue_wmq = []
     cpt = 2
     revenue_cvt = {}
+    ret = 0
+    name = ''
 
     def __init__(self, channel_info, ysd):
         self.ch_code = channel_info['code']
@@ -37,6 +40,11 @@ class IncludeChannel:
         self.revenue = {}
         self.revenue_wmq = []
         self.revenue_cvt = {}
+        self.ret = float(channel_info['ret'])
+        self.name = channel_info['name']
+        struct_t = time.strptime(ysd, '%Y-%m-%d')
+        self.ret = self.ret / calendar.monthrange(struct_t.tm_year, struct_t.tm_mon)[1]
+
         if len(channel_info['include']) > 0:
             for place in channel_info['include']:
                 if time.strptime(ysd, '%Y-%m-%d') >= time.strptime(place['start'], '%Y-%m-%d'):
@@ -99,6 +107,47 @@ class IncludeChannel:
             revenue_line[2] = float(revenue_line[1]) / (revenue_line[10] + revenue_line[11])
             revenue_line[4] = revenue_line[3] / (revenue_line[10] + revenue_line[11])
 
+    def calculat_total_revenue(self):
+        income = 0.0
+        income_ave = 0.0
+        profit = 0.0
+        profit_ave = 0.0
+        profit_net = 0.0
+        profit_net_ave = 0.0
+        profit_net_percent = 0.0
+        probability = 0.0
+        total_device = 0
+        total_place = 0
+
+        total_play = 0
+        total_gift = 0
+
+        if len(self.revenue) > 0:
+            for place in self.revenue.values():
+                income += float(place[1])
+                profit += float(place[3])
+                total_device += int(place[10]) + int(place[11])
+                total_place += 1
+                total_play += int(place[9])
+                total_gift += int(place[6])
+        if len(self.revenue_wmq) > 0:
+            for place in self.revenue_wmq:
+                income += float(place[1])
+                profit += float(place[3])
+                total_device += int(place[10]) + int(place[11])
+                total_place += 1
+                total_play += int(place[9])
+                total_gift += int(place[6])
+        income_ave = income / total_device
+        profit_ave = profit / total_device
+        profit_net = profit - self.ret
+        profit_net_ave = profit_net / total_device
+        profit_net_percent = profit_net / income
+        probability = float(total_gift) / float(total_play)
+
+        return self.name.encode('utf-8'), income, income_ave, profit, profit_ave, profit_net, profit_net_ave, \
+               profit_net_percent, probability, total_device, total_place, total_play, total_gift
+
 
 # 加载catchme数据时需要包含的渠道场地
 includes = {}
@@ -120,14 +169,15 @@ def getyesterday():
 def load_weimaqi(input_file, ch_item):
     with open(input_file) as wmq_file:
         idx = 0
-        for l in wmq_file:
+        for li in wmq_file:
             idx = idx + 1
             if idx == 1:
                 continue
-            l = l.strip()
-            l = l.replace('\r\n', '')
-            l_list = l.split(',')
-            ch_item.append_weimaqi_data(l_list)
+            li = li.strip()
+            li = li.replace('\r\n', '')
+            li_list = li.split(',')
+            ch_item.append_weimaqi_data(li_list)
+
 
 if __name__ == '__main__':
     yesterday = str(getyesterday())
@@ -174,14 +224,69 @@ if __name__ == '__main__':
                 if p_key in includes[c_key].places:
                     includes[c_key].append_catchme_data(line_list)
 
-    load_weimaqi('revenue/weimaqi/revenue_' + yesterday + '_yl.csv', includes[md5('耀莱', False)])
-    load_weimaqi('revenue/weimaqi/revenue_' + yesterday + '_hd.csv', includes[md5('恒大', False)])
-    load_weimaqi('revenue/weimaqi/revenue_' + yesterday + '_xh.csv', includes[md5('星河', False)])
+    t_income = 0.0
+    t_income_ave = 0.0
+    t_profit = 0.0
+    t_profit_ave = 0.0
+    t_profit_net = 0.0
+    t_profit_net_ave = 0.0
+    t_profit_net_percent = 0.0
+    t_probability = 0.0
+    t_total_device = 0
+    t_total_place = 0
+
+    t_total_play = 0
+    t_total_gift = 0
+
+    place_output = []
 
     writer = csv.writer(file('revenue/revenue_' + yesterday + '.csv', 'wb'))
     for item in includes.values():
+        load_weimaqi('revenue/weimaqi/revenue_' + yesterday + '_' + item.ch_code + '.csv',
+                     includes[md5(item.name)])
         writer.writerows(item.revenue.values())
         writer.writerows(item.revenue_wmq)
         writer.writerow('')
+        out_name, out_income, out_income_ave, out_profit, out_profit_ave, out_profit_net, out_profit_net_ave, \
+        out_profit_net_percent, out_probability, out_total_device, out_total_place, out_play, out_gift \
+            = item.calculat_total_revenue()
 
-    print 'main spider execute finish'
+        t_income += out_income
+        t_profit += out_profit
+        t_profit_net += out_profit_net
+        t_total_device += out_total_device
+        t_total_place += out_total_place
+        t_total_play += out_play
+        t_total_gift += out_gift
+        t_income_ave = t_income / t_total_device
+        t_profit_ave = t_profit / t_total_device
+        t_profit_net_ave = t_profit_net / t_total_device
+        t_profit_net_percent = t_profit_net / t_income
+        t_probability = float(t_total_gift) / float(t_total_play)
+
+        place_output.append('\n[渠道数据-' + out_name
+                            + ']\n营收: ' + str(round(out_income, 1))
+                            + '\n台均营收: ' + str(round(out_income_ave, 1))
+                            + '\n去娃娃盈利: ' + str(round(out_profit, 1))
+                            + '\n去娃娃去娃娃盈利: ' + str(round(out_profit_ave, 1))
+                            + '\n去租金去娃娃盈利: ' + str(round(out_profit_net, 1))
+                            + '\n去租金去娃娃台均盈利: ' + str(round(out_profit_net_ave, 1))
+                            + '\n去租金去娃娃盈利率: ' + str(round(out_profit_net_percent * 100, 2))
+                            + '%\n抓取概率: ' + str(round(out_probability * 100, 2))
+                            + '%\n总台数: ' + str(out_total_device)
+                            + '\n总场地数: ' + str(out_total_place))
+
+    print ('\n[汇总数据]'
+           + '\n营收: ' + str(round(t_income, 1))
+           + '\n台均营收: ' + str(round(t_income_ave, 1))
+           + '\n去娃娃盈利: ' + str(round(t_profit, 1))
+           + '\n去娃娃去娃娃盈利: ' + str(round(t_profit_ave, 1))
+           + '\n去租金去娃娃盈利: ' + str(round(t_profit_net, 1))
+           + '\n去租金去娃娃台均盈利: ' + str(round(t_profit_net_ave, 1))
+           + '\n去租金去娃娃盈利率: ' + str(round(t_profit_net_percent * 100, 2))
+           + '%\n抓取概率: ' + str(round(t_probability * 100, 2))
+           + '%\n总台数: ' + str(t_total_device)
+           + '\n总场地数: ' + str(t_total_place))
+
+    for output_line in place_output:
+        print (output_line)
