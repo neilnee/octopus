@@ -264,11 +264,11 @@ if __name__ == '__main__':
         t_profit_net_percent = t_profit_net / t_income
         t_probability = float(t_total_gift) / float(t_total_play)
 
-        place_output.append('\n[渠道数据-' + out_name
+        place_output.append('\n[渠道数据 - ' + out_name
                             + ']\n营收: ' + str(round(out_income, 1))
                             + '\n台均营收: ' + str(round(out_income_ave, 1))
                             + '\n去娃娃盈利: ' + str(round(out_profit, 1))
-                            + '\n去娃娃去娃娃盈利: ' + str(round(out_profit_ave, 1))
+                            + '\n去娃娃台均盈利: ' + str(round(out_profit_ave, 1))
                             + '\n去租金去娃娃盈利: ' + str(round(out_profit_net, 1))
                             + '\n去租金去娃娃台均盈利: ' + str(round(out_profit_net_ave, 1))
                             + '\n去租金去娃娃盈利率: ' + str(round(out_profit_net_percent * 100, 2))
@@ -276,11 +276,13 @@ if __name__ == '__main__':
                             + '%\n总台数: ' + str(out_total_device)
                             + '\n总场地数: ' + str(out_total_place))
 
+    time.sleep(1)
+
     print ('\n[汇总数据]'
            + '\n营收: ' + str(round(t_income, 1))
            + '\n台均营收: ' + str(round(t_income_ave, 1))
            + '\n去娃娃盈利: ' + str(round(t_profit, 1))
-           + '\n去娃娃去娃娃盈利: ' + str(round(t_profit_ave, 1))
+           + '\n去娃娃台均盈利: ' + str(round(t_profit_ave, 1))
            + '\n去租金去娃娃盈利: ' + str(round(t_profit_net, 1))
            + '\n去租金去娃娃台均盈利: ' + str(round(t_profit_net_ave, 1))
            + '\n去租金去娃娃盈利率: ' + str(round(t_profit_net_percent * 100, 2))
