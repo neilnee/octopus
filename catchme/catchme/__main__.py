@@ -31,6 +31,7 @@ class IncludeChannel:
     revenue_cvt = {}
     ret = 0
     name = ''
+    with_wmq = True
 
     def __init__(self, channel_info, ysd):
         self.ch_code = channel_info['code']
@@ -44,6 +45,7 @@ class IncludeChannel:
         self.name = channel_info['name']
         struct_t = time.strptime(ysd, '%Y-%m-%d')
         self.ret = self.ret / calendar.monthrange(struct_t.tm_year, struct_t.tm_mon)[1]
+        self.with_wmq = bool(channel_info['wmq'])
 
         if len(channel_info['include']) > 0:
             for place in channel_info['include']:
@@ -193,19 +195,19 @@ if __name__ == '__main__':
         load_account = json.load(account_file)
         for i in range(0, len(load_account)):
             cmds.append(('scrapy crawl weimaqi -a uid='
-                        + str(load_account[i]['uid'])
-                        + ' -a pwd='
-                        + str(load_account[i]['pwd'])
-                        + ' -a yesterday='
-                        + yesterday
-                        + ' -a price=12'
-                        + ' -a ch='
-                        + str(load_account[i]['place'])
-                        + ' -a cpt='
-                        + str(load_account[i]['cpt'])
-                        + ' -o '
-                        + 'revenue/weimaqi/revenue' + '_' + yesterday + '_' + str(load_account[i]['place'])
-                        + '.csv').split())
+                         + str(load_account[i]['uid'])
+                         + ' -a pwd='
+                         + str(load_account[i]['pwd'])
+                         + ' -a yesterday='
+                         + yesterday
+                         + ' -a price=12'
+                         + ' -a ch='
+                         + str(load_account[i]['place'])
+                         + ' -a cpt='
+                         + str(load_account[i]['cpt'])
+                         + ' -o '
+                         + 'revenue/weimaqi/revenue' + '_' + yesterday + '_' + str(load_account[i]['place'])
+                         + '.csv').split())
         account_file.close()
     for c in cmds:
         p = SpiderProcess(c)
@@ -242,10 +244,12 @@ if __name__ == '__main__':
 
     writer = csv.writer(file('revenue/revenue_' + yesterday + '.csv', 'wb'))
     for item in includes.values():
-        load_weimaqi('revenue/weimaqi/revenue_' + yesterday + '_' + item.ch_code + '.csv',
-                     includes[md5(item.name)])
+        if item.with_wmq:
+            load_weimaqi('revenue/weimaqi/revenue_' + yesterday + '_' + item.ch_code + '.csv',
+                         includes[md5(item.name)])
         writer.writerows(item.revenue.values())
-        writer.writerows(item.revenue_wmq)
+        if item.with_wmq:
+            writer.writerows(item.revenue_wmq)
         writer.writerow('')
         out_name, out_income, out_income_ave, out_profit, out_profit_ave, out_profit_net, out_profit_net_ave, \
         out_profit_net_percent, out_probability, out_total_device, out_total_place, out_play, out_gift \
@@ -276,7 +280,7 @@ if __name__ == '__main__':
                             + '%\n总台数: ' + str(out_total_device)
                             + '\n总场地数: ' + str(out_total_place))
 
-    time.sleep(1)
+    time.sleep(3)
 
     print ('\n[汇总数据]'
            + '\n营收: ' + str(round(t_income, 1))
