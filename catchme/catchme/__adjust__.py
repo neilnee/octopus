@@ -129,6 +129,7 @@ def convert_data(device_f='', income_f='', output_f='', date=''):
         for i in range(0, 3):
             device_used[i].adjust(0, 0, 1)
 
+    convert_map = []
     insert_pos = 0
     for d in device_out:
         if d.income == 0 and d.gift == 0 and d.play == 0:
@@ -139,6 +140,8 @@ def convert_data(device_f='', income_f='', output_f='', date=''):
             insert_pos += 1
         if insert_pos >= len(device_used):
             insert_pos = 0
+        print 'add ' + d.device_id + ' to ' + device_used[insert_pos].device_id
+        convert_map.append([str(d.device_id), str(device_used[insert_pos].device_id)])
         device_used[insert_pos].add_data(d)
         insert_pos += 1
 
@@ -165,6 +168,12 @@ def convert_data(device_f='', income_f='', output_f='', date=''):
     print str(income_f) + " : " + str(total_new_user) + "   ;   " + str(total_pay_user) + "   ;   " \
           + str(total_income) + "   ;   " + str(total_play) + "   ;   " + str(total_gift) + "   ;   " \
           + str(total_cost) + "   ;   " + str(total_earn) + "   ;   "
+
+    convert_map_file = file('incomes/convert_map/' + date + '.csv', 'wb')
+    writer = csv.writer(convert_map_file)
+    writer.writerow(['from_device', 'to_device'])
+    for c in convert_map:
+        writer.writerow(c)
 
 
 convert_data('incomes/device/device-0801-0804.json',
