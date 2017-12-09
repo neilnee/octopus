@@ -68,8 +68,8 @@ class WeimaqiSpide(CrawlSpider):
                         if len(ch_info['include']) > 0:
                             for place in ch_info['include']:
                                 if time.strptime(self.yesterday, '%Y-%m-%d') > time.strptime(place['start'], '%Y-%m-%d'):
-                                    print (ch + ' exclude ' + place['original'])
-                                    self.exclude.append(hashlib.md5(place['original'].encode('utf-8')).hexdigest())
+                                    print (ch + ' exclude ' + place['wmq_name'])
+                                    self.exclude.append(hashlib.md5(place['wmq_name'].encode('utf-8')).hexdigest())
                         if len(ch_info['exclude']) > 0:
                             for place in ch_info['exclude']:
                                 print (ch + ' exclude ' + place)
