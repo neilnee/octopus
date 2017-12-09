@@ -52,8 +52,8 @@ class IncludeChannel:
             for place in channel_info['include']:
                 if time.strptime(ysd, '%Y-%m-%d') >= time.strptime(place['start'], '%Y-%m-%d'):
                     place_key = md5(place['name'])
-                    ori_key = md5(place['original'])
-                    self.revenue_cvt[ori_key] = place_key
+                    wmq_key = md5(place['wmq_name'])
+                    self.revenue_cvt[wmq_key] = place_key
                     if bool(place['open']):
                         self.places.append(place_key)
                         self.revenue[place_key] = [0] * 13
@@ -70,9 +70,9 @@ class IncludeChannel:
                         self.close_place.append(place_key)
 
     def append_weimaqi_data(self, input_line):
-        ori_key = md5(input_line[0], False)
-        if ori_key in self.revenue_cvt.keys() and self.revenue_cvt[ori_key] in self.revenue.keys():
-            revenue_line = self.revenue[self.revenue_cvt[ori_key]]
+        wmq_key = md5(input_line[0], False)
+        if wmq_key in self.revenue_cvt.keys() and self.revenue_cvt[wmq_key] in self.revenue.keys():
+            revenue_line = self.revenue[self.revenue_cvt[wmq_key]]
             revenue_line[1] += float(input_line[1])
             revenue_line[3] += float(input_line[3])
             revenue_line[6] += int(input_line[6])
@@ -90,7 +90,7 @@ class IncludeChannel:
             revenue_line[2] = float(revenue_line[1]) / (revenue_line[10] + revenue_line[11])
             revenue_line[4] = revenue_line[3] / (revenue_line[10] + revenue_line[11])
         else:
-            if ori_key in self.revenue_cvt.keys() and self.revenue_cvt[ori_key] in self.close_place:
+            if wmq_key in self.revenue_cvt.keys() and self.revenue_cvt[wmq_key] in self.close_place:
                 return
             wmq_line = [0] * 13
             wmq_line[0] = input_line[0]
