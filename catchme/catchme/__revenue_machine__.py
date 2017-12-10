@@ -3,12 +3,11 @@ import calendar
 import csv
 import hashlib
 import json
-import os
 import time
-from multiprocessing import Process
 
 import datetime
-from openpyxl import load_workbook
+from multiprocessing import Process
+
 from scrapy import cmdline
 
 
@@ -43,8 +42,10 @@ class IncludeChannel:
         self.revenue = {}
         self.revenue_wmq = []
         self.revenue_cvt = {}
+        self.ret = float(channel_info['ret'])
         self.name = channel_info['name']
         struct_t = time.strptime(ysd, '%Y-%m-%d')
+        self.ret = self.ret / calendar.monthrange(struct_t.tm_year, struct_t.tm_mon)[1]
         self.with_wmq = bool(channel_info['wmq'])
 
         if len(channel_info['include']) > 0:
@@ -55,7 +56,7 @@ class IncludeChannel:
                     self.revenue_cvt[wmq_key] = place_key
                     if bool(place['open']):
                         self.places.append(place_key)
-                        self.revenue[place_key] = [0] * 17
+                        self.revenue[place_key] = [0] * 13
                         self.revenue[place_key][0] = str(place['name'].encode('utf-8'))
                         self.revenue[place_key][11] = int(place['disable'])
                         self.revenue[place_key][12] = str(self.name.encode('utf-8'))
@@ -67,10 +68,6 @@ class IncludeChannel:
                             self.revenue[place_key][7] = -int(place['test_play'] * self.cpt)
                     else:
                         self.close_place.append(place_key)
-                if time.strptime(ysd, '%Y-%m-%d') >= time.strptime(place['open_time'], '%Y-%m-%d'):
-                    self.ret += float(place['ret'])
-
-        self.ret = self.ret / calendar.monthrange(struct_t.tm_year, struct_t.tm_mon)[1]
 
     def append_weimaqi_data(self, input_line):
         wmq_key = md5(input_line[0], False)
@@ -95,7 +92,7 @@ class IncludeChannel:
         else:
             if wmq_key in self.revenue_cvt.keys() and self.revenue_cvt[wmq_key] in self.close_place:
                 return
-            wmq_line = [0] * 17
+            wmq_line = [0] * 13
             wmq_line[0] = input_line[0]
             wmq_line[1] = input_line[1]
             wmq_line[2] = input_line[2]
@@ -109,63 +106,30 @@ class IncludeChannel:
             wmq_line[10] = input_line[10]
             wmq_line[11] = input_line[11]
             wmq_line[12] = str(self.name.encode('utf-8'))
-            wmq_line[13] = 0
-            wmq_line[14] = 0
-            wmq_line[15] = 0
-            wmq_line[16] = 0
             self.revenue_wmq.append(wmq_line)
 
-    # noinspection PyBroadException
     def append_catchme_data(self, input_line):
-        place_key = md5(input_line[0].value, True)
+        place_key = md5(str(input_line[2]).strip(), False)
         if place_key in self.revenue.keys():
             revenue_line = self.revenue[place_key]
-            # 营收
-            revenue_line[1] += float(input_line[2].value)
-            # 盈利(去礼品)
-            revenue_line[3] += float(input_line[13].value)
-            # 掉落
-            revenue_line[6] += int(input_line[10].value)
-            # 游戏次数
-            revenue_line[9] += int(input_line[9].value)
-            # 游戏币
-            revenue_line[7] += int(input_line[9].value) * self.cpt
-            # 免费发放游戏币
+            revenue_line[1] += float(input_line[6])
+            revenue_line[3] += float(input_line[6]) - float(input_line[9])
+            revenue_line[6] += int(input_line[8])
+            revenue_line[9] += int(input_line[7])
+            revenue_line[7] += int(input_line[7]) * self.cpt
             revenue_line[8] = 0
+            # noinspection PyBroadException
             try:
-                # 抓取概率
                 revenue_line[5] = float(revenue_line[6]) / float(revenue_line[9])
             except Exception:
                 revenue_line[5] = 0.0
-            # 在线台数
-            revenue_line[10] += int(input_line[4].value)
-            # 离线台数
-            revenue_line[11] += int(input_line[3].value) - int(input_line[4].value)
-            # 台均营收
-            try:
-                revenue_line[2] = float(revenue_line[1]) / (revenue_line[10] + revenue_line[11])
-            except Exception:
-                revenue_line[2] = 0.0
-            # 台均盈利(去礼品)
-            try:
-                revenue_line[4] = revenue_line[3] / (revenue_line[10] + revenue_line[11])
-            except Exception:
-                revenue_line[4] = 0.0
-            # 扫码用户
-            revenue_line[13] += int(input_line[5].value)
-            # 充值用户
-            revenue_line[14] += int(input_line[7].value)
-            # 游戏用户
-            revenue_line[15] += int(input_line[6].value)
-            # 扫码->充值转化率
-            try:
-                revenue_line[16] = float(revenue_line[14]) / float(revenue_line[13])
-            except Exception:
-                revenue_line[16] = 0.0
-            print('[' + revenue_line[12] + '][' + revenue_line[0] + '][' + str(revenue_line[1])
-                  + '][' + str(input_line[3].value) + '][' + str(input_line[4].value) + ']')
+            if input_line[12]:
+                revenue_line[10] += 1
+            else:
+                revenue_line[11] += 1
+            revenue_line[2] = float(revenue_line[1]) / (revenue_line[10] + revenue_line[11])
+            revenue_line[4] = revenue_line[3] / (revenue_line[10] + revenue_line[11])
 
-    # noinspection PyBroadException
     def calculat_total_revenue(self):
         income = 0.0
         income_ave = 0.0
@@ -186,11 +150,6 @@ class IncludeChannel:
         total_play = 0
         total_gift = 0
 
-        total_user_enter = 0
-        total_user_pay = 0
-        total_user_play = 0
-        user_enter_to_pay = 0.0
-
         total_line = []
 
         if len(self.revenue) > 0:
@@ -207,9 +166,6 @@ class IncludeChannel:
                 total_coin_free += int(place[8])
                 if (float(place[10]) + float(place[11])) > 0 and float(place[1]) / (float(place[10]) + float(place[11])) >= 35.2:
                     total_352 += 1
-                total_user_enter += int(place[13])
-                total_user_pay += int(place[14])
-                total_user_play += int(place[15])
         if len(self.revenue_wmq) > 0:
             for place in self.revenue_wmq:
                 income += float(place[1])
@@ -233,12 +189,8 @@ class IncludeChannel:
                 profit_net_percent = profit_net / income
             if total_play > 0:
                 probability = float(total_gift) / float(total_play)
-            try:
-                user_enter_to_pay = float(total_user_pay) / float(total_user_enter)
-            except Exception:
-                user_enter_to_pay = 0.0
 
-            total_line = [0] * 23
+            total_line = [0] * 19
             total_line[0] = str(self.name.encode('utf-8'))
             total_line[1] = income
             total_line[2] = income_ave
@@ -252,20 +204,15 @@ class IncludeChannel:
             total_line[10] = total_device_online
             total_line[11] = total_device_offline
             total_line[12] = '-'
-            total_line[13] = total_user_enter
-            total_line[14] = total_user_pay
-            total_line[15] = total_user_play
-            total_line[16] = user_enter_to_pay
-            total_line[17] = self.ret
-            total_line[18] = profit_net
-            total_line[19] = profit_net_ave
-            total_line[20] = total_place
-            total_line[21] = total_352
-            total_line[22] = float(total_352) / float(total_place)
+            total_line[13] = self.ret
+            total_line[14] = profit_net
+            total_line[15] = profit_net_ave
+            total_line[16] = total_place
+            total_line[17] = total_352
+            total_line[18] = float(total_352) / float(total_place)
 
         return self.name.encode('utf-8'), income, income_ave, profit, profit_ave, profit_net, profit_net_ave, \
-               profit_net_percent, probability, total_device, total_place, total_play, total_gift, total_line, \
-               total_user_enter, total_user_pay, total_user_play, user_enter_to_pay
+               profit_net_percent, probability, total_device, total_place, total_play, total_gift, total_line
 
 
 # 加载catchme数据时需要包含的渠道场地
@@ -274,13 +221,12 @@ includes = {}
 
 def md5(input_str, encode=True):
     if encode:
-        return hashlib.md5(input_str.encode('utf-8').strip()).hexdigest()
+        return hashlib.md5(input_str.encode('utf-8')).hexdigest()
     else:
-        return hashlib.md5(input_str.strip()).hexdigest()
+        return hashlib.md5(input_str).hexdigest()
 
 
 def getyesterday():
-    # return '2017-12-01'
     today = datetime.date.today()
     oneday = datetime.timedelta(days=1)
     return today - oneday
@@ -312,22 +258,20 @@ if __name__ == '__main__':
     with open("../account.json") as account_file:
         load_account = json.load(account_file)
         for i in range(0, len(load_account)):
-            wmq_ch_file = 'revenue/weimaqi/revenue_' + yesterday + '_' + load_account[i]['place'] + '.csv'
-            if not os.path.isfile(wmq_ch_file):
-                cmds.append(('scrapy crawl weimaqi -a uid='
-                             + str(load_account[i]['uid'])
-                             + ' -a pwd='
-                             + str(load_account[i]['pwd'])
-                             + ' -a yesterday='
-                             + yesterday
-                             + ' -a price=12'
-                             + ' -a ch='
-                             + str(load_account[i]['place'])
-                             + ' -a cpt='
-                             + str(load_account[i]['cpt'])
-                             + ' -o '
-                             + 'revenue/weimaqi/revenue' + '_' + yesterday + '_' + str(load_account[i]['place'])
-                             + '.csv').split())
+            cmds.append(('scrapy crawl weimaqi -a uid='
+                         + str(load_account[i]['uid'])
+                         + ' -a pwd='
+                         + str(load_account[i]['pwd'])
+                         + ' -a yesterday='
+                         + yesterday
+                         + ' -a price=12'
+                         + ' -a ch='
+                         + str(load_account[i]['place'])
+                         + ' -a cpt='
+                         + str(load_account[i]['cpt'])
+                         + ' -o '
+                         + 'revenue/weimaqi/revenue' + '_' + yesterday + '_' + str(load_account[i]['place'])
+                         + '.csv').split())
         account_file.close()
     for c in cmds:
         p = SpiderProcess(c)
@@ -335,18 +279,16 @@ if __name__ == '__main__':
         p.start()
         p.join()
 
-    catchme_file = 'revenue/catchme_ch/revenue_' + yesterday + '_ch.xlsx'
-    if os.path.isfile(catchme_file):
-        workbook = load_workbook(catchme_file)
-        worksheet = workbook.get_sheet_by_name(workbook.get_sheet_names()[0])
-        for row in worksheet.rows:
-            if row[1].value:
-                c_key = md5(row[1].value, True)
-                if c_key in includes.keys():
-                    p_key = md5(row[0].value, True)
-                    if p_key in includes[c_key].places:
-                        includes[c_key].append_catchme_data(row)
-        workbook.close()
+    with open('revenue/catchme/revenue_' + yesterday + '_c.csv') as catchme_file:
+        for line in catchme_file:
+            line = line.strip()
+            line = line.replace('\r\n', '')
+            line_list = line.split(',')
+            c_key = md5(line_list[1], False)
+            if c_key in includes.keys():
+                p_key = md5(str(line_list[2]).strip(), False)
+                if p_key in includes[c_key].places:
+                    includes[c_key].append_catchme_data(line_list)
 
     t_income = 0.0
     t_income_ave = 0.0
@@ -358,6 +300,7 @@ if __name__ == '__main__':
     t_probability = 0.0
     t_total_device = 0
     t_total_place = 0
+
     t_total_play = 0
     t_total_gift = 0
 
@@ -371,8 +314,8 @@ if __name__ == '__main__':
                          includes[md5(item.name)])
 
         out_name, out_income, out_income_ave, out_profit, out_profit_ave, out_profit_net, out_profit_net_ave, \
-        out_profit_net_percent, out_probability, out_total_device, out_total_place, out_play, out_gift, out_line, \
-        out_user_enter, out_user_pay, out_user_play, out_user_enter2pay = item.calculat_total_revenue()
+        out_profit_net_percent, out_probability, out_total_device, out_total_place, out_play, out_gift, out_line \
+            = item.calculat_total_revenue()
 
         if out_total_device == 0:
             continue
@@ -400,9 +343,11 @@ if __name__ == '__main__':
         place_output.append('\n[渠道数据 - ' + out_name
                             + ']\n营收: ' + str(round(out_income, 1))
                             + '\n台均营收: ' + str(round(out_income_ave, 1))
-                            + '\n盈利(去除娃娃和租金): ' + str(round(out_profit_net, 1))
-                            + '\n台均盈利: ' + str(round(out_profit_net_ave, 1))
-                            + '\n盈利率: ' + str(round(out_profit_net_percent * 100, 2))
+                            + '\n去娃娃盈利: ' + str(round(out_profit, 1))
+                            + '\n去娃娃台均盈利: ' + str(round(out_profit_ave, 1))
+                            + '\n去租金去娃娃盈利: ' + str(round(out_profit_net, 1))
+                            + '\n去租金去娃娃台均盈利: ' + str(round(out_profit_net_ave, 1))
+                            + '\n去租金去娃娃盈利率: ' + str(round(out_profit_net_percent * 100, 2))
                             + '%\n抓取概率: ' + str(round(out_probability * 100, 2))
                             + '%\n总台数: ' + str(out_total_device)
                             + '\n总场地数: ' + str(out_total_place))
@@ -415,9 +360,11 @@ if __name__ == '__main__':
     print ('\n[汇总数据]'
            + '\n营收: ' + str(round(t_income, 1))
            + '\n台均营收: ' + str(round(t_income_ave, 1))
-           + '\n盈利(去除娃娃和租金): ' + str(round(t_profit_net, 1))
-           + '\n台均盈利: ' + str(round(t_profit_net_ave, 1))
-           + '\n盈利率: ' + str(round(t_profit_net_percent * 100, 2))
+           + '\n去娃娃盈利: ' + str(round(t_profit, 1))
+           + '\n去娃娃台均盈利: ' + str(round(t_profit_ave, 1))
+           + '\n去租金去娃娃盈利: ' + str(round(t_profit_net, 1))
+           + '\n去租金去娃娃台均盈利: ' + str(round(t_profit_net_ave, 1))
+           + '\n去租金去娃娃盈利率: ' + str(round(t_profit_net_percent * 100, 2))
            + '%\n抓取概率: ' + str(round(t_probability * 100, 2))
            + '%\n总台数: ' + str(t_total_device)
            + '\n总场地数: ' + str(t_total_place))
