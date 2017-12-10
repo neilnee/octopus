@@ -251,7 +251,7 @@ class IncludeChannel:
             total_line[9] = total_play
             total_line[10] = total_device_online
             total_line[11] = total_device_offline
-            total_line[12] = '-'
+            total_line[12] = total_device_online + total_device_offline
             total_line[13] = total_user_enter
             total_line[14] = total_user_pay
             total_line[15] = total_user_play
@@ -280,7 +280,6 @@ def md5(input_str, encode=True):
 
 
 def getyesterday():
-    # return '2017-12-01'
     today = datetime.date.today()
     oneday = datetime.timedelta(days=1)
     return today - oneday
