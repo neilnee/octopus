@@ -2,6 +2,7 @@
 import calendar
 import csv
 import hashlib
+import httplib
 import json
 import os
 import time
@@ -22,7 +23,289 @@ class SpiderProcess(Process):
         cmdline.execute(self.cmd)
 
 
-class IncludeChannel:
+class Place4Week:
+    # 场地信息
+    p_name = ''
+    p_code = ''
+    wmq_name = ''
+    wmq_code = ''
+    ye_name = ''
+    ye_code = ''
+    ye_id = ''
+    open_time = ''
+    catchme_time = ''
+    ret = 0
+    cpt = 0
+
+    # 测试数据
+    test_gift = 0
+    test_income = 0.0
+    test_cost = 0.0
+    test_play = 0
+
+    # 周运营天数
+    r_work_day = 0
+    # 营收
+    r_income = 0.0
+    # 去娃娃盈利
+    r_earn = 0.0
+    # 抓取概率
+    r_probability = 0.0
+    # 掉落
+    r_gift = 0
+    # 游戏币
+    r_coin_buy = 0
+    # 派币
+    r_coin_free = 0
+    # 游戏次数
+    r_play_time = 0
+    # 渠道
+    r_channel = ''
+    # 扫码用户
+    r_user_enter = 0
+    # 充值用户
+    r_user_pay = 0
+    # 游戏用户
+    r_user_play = 0
+    # 扫码->充值转化率
+    r_user_enter2pay = 0.0
+    # 观影人次
+    r_user_cinema = 0
+    # 观影->扫码转化率
+    r_user_cinema2enter = 0.0
+
+    def __init__(self, place_info, mon, sun):
+        self.p_name = place_info['name']
+        self.p_code = md5(self.p_name)
+        self.wmq_name = place_info['wmq_name']
+        if len(self.wmq_name) > 0:
+            self.wmq_code = md5(self.wmq_name)
+        self.ye_name = place_info['ye_name']
+        if len(self.ye_name) > 0:
+            self.ye_code = md5(self.ye_name)
+            self.ye_id = int(place_info['ye_id'])
+        self.open_time = place_info['open_time']
+        self.catchme_time = place_info['start']
+        self.ret = int(place_info['ret'])
+        self.test_gift = int(place_info['test_gift'])
+        self.test_play = int(place_info['test_play'])
+        self.test_income = float(place_info['test_income'])
+        self.test_cost = float(place_info['test_cost'])
+
+        if time.strptime(str(mon), '%Y-%m-%d') \
+                <= time.strptime(self.catchme_time, '%Y-%m-%d') \
+                <= time.strptime(str(sun), '%Y-%m-%d'):
+            self.r_income = -self.test_income
+            self.r_play_time = -self.test_play
+            self.r_gift = -self.test_gift
+
+    # noinspection PyBroadException
+    def append_catchme(self, line, d):
+        if time.strptime(self.open_time, '%Y-%m-%d') <= time.strptime(str(d), '%Y-%m-%d'):
+            self.r_work_day += 1
+            self.r_income += float(line[2].value)
+            self.r_earn += float(line[13].value)
+            self.r_gift += int(line[10].value)
+            self.r_coin_buy += int(line[9].value) * self.cpt
+            self.r_coin_free += 0
+            self.r_play_time += int(line[9].value)
+            self.r_user_enter += int(line[5].value)
+            self.r_user_pay += int(line[7].value)
+            self.r_user_play += int(line[6].value)
+            try:
+                self.r_probability = float(self.r_gift) / float(self.r_play_time)
+                self.r_user_enter2pay = float(self.r_user_pay) / float(self.r_user_enter)
+            except Exception:
+                self.r_probability = 0.0
+                self.r_user_enter2pay = 0.0
+
+    # noinspection PyBroadException
+    def append_wmq(self, line, d):
+        if time.strptime(self.open_time, '%Y-%m-%d') <= time.strptime(str(d), '%Y-%m-%d'):
+            self.r_income += float(line[1])
+            self.r_earn += float(line[3])
+            self.r_gift += int(line[6])
+            self.r_coin_buy += int(line[7])
+            self.r_coin_free += int(line[8])
+            self.r_play_time += int(line[9])
+            try:
+                self.r_probability = float(self.r_gift) / float(self.r_play_time)
+            except Exception:
+                self.r_probability = 0.0
+            pass
+
+    # noinspection PyBroadException
+    def append_cinema(self, cinema):
+        self.r_user_cinema = cinema.audTotal
+        try:
+            self.r_user_cinema2enter = float(self.r_user_enter) / float(self.r_user_cinema)
+        except Exception:
+            self.r_user_cinema2enter = 0.0
+
+    def output(self):
+        line = [0] * 16
+        line[0] = str(self.p_name.encode('utf-8'))
+        line[1] = self.r_work_day
+        line[2] = self.r_income
+        line[3] = self.r_earn
+        line[4] = self.r_probability
+        line[5] = self.r_gift
+        line[6] = self.r_coin_buy
+        line[7] = self.r_coin_free
+        line[8] = self.r_play_time
+        line[9] = str(self.r_channel.encode('utf-8'))
+        line[10] = self.r_user_enter
+        line[11] = self.r_user_pay
+        line[12] = self.r_user_play
+        line[13] = self.r_user_enter2pay
+        line[14] = self.r_user_cinema
+        line[15] = self.r_user_cinema2enter
+        return line
+
+    def print_infos(self):
+        print('[' + self.r_channel.encode('utf-8') + '][' + self.p_name.encode('utf-8') + '][运营天数:'
+              + str(self.r_work_day) + '][营收:' + str(self.r_income) + '][盈利:' + str(self.r_earn)
+              + '][掉落:' + str(self.r_gift) + '][游戏币:' + str(self.r_coin_buy) + '][派币:' + str(self.r_coin_free)
+              + '][游戏次数:' + str(self.r_play_time) + '][扫码用户:' + str(self.r_user_enter)
+              + '][充值用户:' + str(self.r_user_pay) + '][游戏用户:' + str(self.r_user_play) + '][充值转化:'
+              + str(self.r_user_enter2pay) + '][观影人次:' + str(self.r_user_cinema)
+              + '][观影转化:' + str(self.r_user_cinema2enter) + ']')
+
+
+class Channel4Week:
+    ch_code = ''
+    ch_key = ''
+    places = {}
+    cpt = 2
+    ch_name = ''
+    wmq_code_map = {}
+    day_of_month = 0
+
+    def __init__(self, channel_info, mday, sday, dom):
+        self.places = {}
+        self.wmq_code_map = {}
+        self.ch_code = channel_info['code']
+        self.ch_key = md5(channel_info['name'])
+        self.cpt = int(channel_info['cpt'])
+        self.ch_name = channel_info['name']
+        self.day_of_month = dom
+        if len(channel_info['include']) > 0:
+            for p in channel_info['include']:
+                if time.strptime(p['open_time'], '%Y-%m-%d') <= time.strptime(sday, '%Y-%m-%d'):
+                    p4week = Place4Week(p, mday, sday)
+                    p4week.cpt = self.cpt
+                    p4week.r_channel = self.ch_name
+                    self.places[p4week.p_code] = p4week
+                    if len(p4week.wmq_code) > 0:
+                        self.wmq_code_map[p4week.wmq_code] = p4week.p_code
+
+    def append_catchme(self, line, d):
+        p_code = md5(line[0].value, True)
+        if p_code in self.places.keys():
+            self.places[p_code].append_catchme(line, d)
+
+    def append_weimaqi(self, line, d):
+        wmq_code = md5(line[0], False)
+        if wmq_code in self.wmq_code_map.keys():
+            if self.wmq_code_map[wmq_code] in self.places.keys():
+                self.places[self.wmq_code_map[wmq_code]].append_wmq(line, d)
+
+    # noinspection PyBroadException
+    def output(self):
+        l_income = 0.0
+        l_earn = 0.0
+        l_probability = 0.0
+        l_gift = 0
+        l_coin_buy = 0
+        l_coin_free = 0
+        l_play_time = 0
+        l_user_enter = 0
+        l_user_pay = 0
+        l_user_play = 0
+        l_user_enter2pay = 0.0
+        l_user_cinema = 0
+        l_user_cinema2enter = 0.0
+        l_ret = 0.0
+
+        temp_user_enter = 0
+
+        for p in self.places.values():
+            l_income += p.r_income
+            l_earn += p.r_earn
+            l_gift += p.r_gift
+            l_coin_buy += p.r_coin_buy
+            l_coin_free += p.r_coin_free
+            l_play_time += p.r_play_time
+            l_user_enter += p.r_user_enter
+            l_user_pay += p.r_user_pay
+            l_user_play += p.r_user_play
+            l_ret += p.r_work_day * p.ret / self.day_of_month
+
+            if p.r_user_cinema > 0:
+                temp_user_enter += p.r_user_enter
+                l_user_cinema += p.r_user_cinema
+                try:
+                    l_user_cinema2enter = float(temp_user_enter) / float(l_user_cinema)
+                except Exception:
+                    pass
+            try:
+                l_user_enter2pay = float(l_user_pay) / float(l_user_enter)
+            except Exception:
+                pass
+            try:
+                l_probability = float(l_gift) / float(l_play_time)
+            except Exception:
+                pass
+
+        line = [0] * 18
+        line[0] = str(self.ch_name.encode('utf-8'))
+        line[1] = ''
+        line[2] = l_income
+        line[3] = l_earn
+        line[4] = l_probability
+        line[5] = l_gift
+        line[6] = l_coin_buy
+        line[7] = l_coin_free
+        line[8] = l_play_time
+        line[9] = '/'
+        line[10] = l_user_enter
+        line[11] = l_user_pay
+        line[12] = l_user_play
+        line[13] = l_user_enter2pay
+        line[14] = l_user_cinema
+        line[15] = l_user_cinema2enter
+        line[16] = l_ret
+        line[17] = l_earn - l_ret
+        return line
+
+
+class Cinema4Week:
+    cinemaCode = ''
+    cinemaId = ''  # 影院ID
+    cinemaName = ''  # 影院名称
+    amount = 0.0  # 当周票房
+    scenes = 0.0  # 当周场次
+    avgScreen = 0.0  # 单荧幕平均周票房
+    avgPS = 0.0  # 场均人次
+    screen_yield = 0.0  # 单日单厅票房
+    scenes_time = 0.0  # 单日单厅场次
+    audTotal = 0  # 周观影人次
+
+    def __init__(self, line):
+        self.cinemaId = int(line[0])
+        self.cinemaName = line[1]
+        self.amount = float(line[2])
+        self.scenes = float(line[3])
+        self.avgScreen = float(line[4])
+        self.avgPS = float(line[5])
+        self.screen_yield = float(line[6])
+        self.scenes_time = float(line[7])
+        self.audTotal = self.scenes * self.avgPS
+        self.cinemaCode = md5(self.cinemaName, False)
+        pass
+
+
+class Channel4Day:
     ch_code = ''
     ch_key = ''
     places = []
@@ -38,7 +321,7 @@ class IncludeChannel:
     def __init__(self, channel_info, ysd):
         self.ch_code = channel_info['code']
         self.ch_key = md5(channel_info['name'])
-        self.cpt = int(ch['cpt'])
+        self.cpt = int(channel_info['cpt'])
         self.places = []
         self.revenue = {}
         self.revenue_wmq = []
@@ -284,18 +567,92 @@ def getyesterday():
     oneday = datetime.timedelta(days=1)
     return today - oneday
 
-
 def load_weimaqi(input_file, ch_item):
     with open(input_file) as wmq_file:
         idx = 0
-        for li in wmq_file:
+        for line in wmq_file:
             idx = idx + 1
             if idx == 1:
                 continue
-            li = li.strip()
-            li = li.replace('\r\n', '')
-            li_list = li.split(',')
-            ch_item.append_weimaqi_data(li_list)
+            line = line.strip()
+            line = line.replace('\r\n', '')
+            line_list = line.split(',')
+            ch_item.append_weimaqi_data(line_list)
+
+
+class Cinema:
+    cinemaId = ''  # 影院ID
+    cinemaName = ''  # 影院名称
+    amount = 0.0  # 当周票房
+    scenes = 0.0  # 当周场次
+    avgScreen = 0.0  # 单荧幕平均周票房
+    avgPS = 0.0  # 场均人次
+    screen_yield = 0.0  # 单日单厅票房
+    scenes_time = 0.0  # 单日单厅场次
+
+    def __init__(self, json_cinema):
+        self.cinemaId = str(json_cinema['cinemaId'])
+        self.cinemaName = str(json_cinema['cinemaName'].encode('utf-8'))
+        self.amount = float(json_cinema['amount'])
+        self.scenes = float(json_cinema['scenes'])
+        self.avgScreen = float(json_cinema['avgScreen'])
+        self.avgPS = float(json_cinema['avgPS'])
+        self.screen_yield = float(json_cinema['screen_yield'])
+        self.scenes_time = float(json_cinema['scenes_time'])
+
+    def output(self):
+        output = [0] * 8
+        output[0] = self.cinemaId
+        output[1] = self.cinemaName
+        output[2] = self.amount
+        output[3] = self.scenes
+        output[4] = self.avgScreen
+        output[5] = self.avgPS
+        output[6] = self.screen_yield
+        output[7] = self.scenes_time
+        return output
+
+
+def do_request_cinema_get(idx, week):
+    ret = []
+    conn = httplib.HTTPConnection("www.cbooo.cn")
+    conn.request("GET", "/BoxOffice/getCBW?pIndex=" + str(idx) + "&dt=" + str(week))
+    response = conn.getresponse()
+    # print "request response : " + str(response.status)
+    cinemas = json.loads(response.read())['data1']
+    for i in range(0, len(cinemas)):
+        ret.append(Cinema(cinemas[i]))
+    conn.close()
+    return ret
+
+
+def request_cinema_data(w_idx):
+    cinema_writer = csv.writer(file('revenue/cbooo/week_' + str(w_idx) + '.csv', 'wb'))
+    title = [0] * 8
+    title[0] = '影院ID'
+    title[1] = '影院名称'
+    title[2] = '当周票房'
+    title[3] = '当周场次'
+    title[4] = '单荧幕平均周票房'
+    title[5] = '场均人次'
+    title[6] = '单日单厅票房'
+    title[7] = '单日单厅场次'
+    cinema_writer.writerow(title)
+    index = 1
+    count = 0
+    ids = []
+    while index > 0:
+        cinema_list = do_request_cinema_get(index, w_idx)
+        for cinema in cinema_list:
+            if cinema.cinemaId not in ids:
+                ids.append(cinema.cinemaId)
+                cinema_writer.writerow(cinema.output())
+                count += 1
+                print('影院[' + cinema.cinemaName + ']导入完成;总数[' + str(count) + ']')
+        if len(cinema_list) >= 10:
+            index += 1
+        else:
+            index = -1
 
 
 if __name__ == '__main__':
@@ -305,7 +662,7 @@ if __name__ == '__main__':
         load_ch = json.load(ch_file)
         for ch in load_ch:
             if ch['name']:
-                includes[md5(ch['name'])] = IncludeChannel(ch, yesterday)
+                includes[md5(ch['name'])] = Channel4Day(ch, yesterday)
 
     cmds = []
     with open("../account.json") as account_file:
@@ -423,3 +780,93 @@ if __name__ == '__main__':
 
     for output_line in place_output:
         print (output_line)
+
+    # 开始计算周汇总数据
+    week_chs = {}
+    cinema_map = {}
+    date978 = datetime.date(2017, 12, 03)
+
+    if time.strptime(yesterday, '%Y-%m-%d').tm_wday == 6:
+        sunday = yesterday
+        struct_sunday = time.strptime(sunday, '%Y-%m-%d')
+        datetime_sunday = datetime.date(struct_sunday.tm_year, struct_sunday.tm_mon, struct_sunday.tm_mday)
+        gap_day = datetime_sunday - date978
+        monday = str(datetime_sunday - datetime.timedelta(days=6))
+        week_idx = 978 + gap_day.days / 7
+        dayofm = calendar.monthrange(struct_sunday.tm_year, struct_sunday.tm_mon)[1]
+        print('start week calculate: mon[' + monday + '] - sun [' + sunday + '] & week_idx [' + str(week_idx) + ']')
+
+        with open("../channel.json") as ch_file:
+            load_ch = json.load(ch_file)
+            for ch in load_ch:
+                if ch['name']:
+                    week_chs[md5(ch['name'])] = Channel4Week(ch, monday, sunday, dayofm)
+
+        for i in range(0, 7):
+            day = datetime_sunday - datetime.timedelta(days=i)
+            # 加载catchme数据
+            catchme_day_file = 'revenue/catchme_ch/revenue_' + str(day) + '_ch.xlsx'
+            if os.path.isfile(catchme_day_file):
+                workbook = load_workbook(catchme_day_file)
+                worksheet = workbook.get_sheet_by_name(workbook.get_sheet_names()[0])
+                for row in worksheet.rows:
+                    if row[1].value:
+                        c_key = md5(row[1].value, True)
+                        if c_key in week_chs.keys():
+                            week_chs[c_key].append_catchme(row, day)
+                workbook.close()
+            # 加载wmq数据
+            wmq_day_file_hd = 'revenue/weimaqi/revenue_' + str(day) + '_hd.csv'
+            if os.path.isfile(wmq_day_file_hd):
+                with open(wmq_day_file_hd) as hd_file:
+                    ignore = True
+                    for li in hd_file:
+                        if ignore:
+                            ignore = False
+                            continue
+                        li = li.strip()
+                        li = li.replace('\r\n', '')
+                        li_list = li.split(',')
+                        week_chs[md5('恒大', False)].append_weimaqi(li_list, day)
+            wmq_day_file_xh = 'revenue/weimaqi/revenue_' + str(day) + '_xh.csv'
+            if os.path.isfile(wmq_day_file_xh):
+                with open(wmq_day_file_xh) as xh_file:
+                    ignore = True
+                    for li in xh_file:
+                        if ignore:
+                            ignore = False
+                            continue
+                        li = li.strip()
+                        li = li.replace('\r\n', '')
+                        li_list = li.split(',')
+                        week_chs[md5('星河', False)].append_weimaqi(li_list, day)
+
+        cbooo_path = 'revenue/cbooo/week_' + str(week_idx) + '.csv'
+        if not os.path.isfile(cbooo_path):
+            request_cinema_data(week_idx)
+
+        if os.path.isfile(cbooo_path):
+            with open(cbooo_path) as cbooo_file:
+                ignore = True
+                for li in cbooo_file:
+                    if ignore:
+                        ignore = False
+                        continue
+                    li = li.strip()
+                    li = li.replace('\r\n', '')
+                    li_list = li.split(',')
+                    c = Cinema4Week(li_list)
+                    cinema_map[c.cinemaCode] = c
+
+        final_writer = csv.writer(file('revenue/week/week_' + str(monday) + '_' + str(sunday) + '.csv', 'wb'))
+        for channel in week_chs.values():
+            for place in channel.places.values():
+                if place.ye_code in cinema_map.keys():
+                    place.append_cinema(cinema_map[place.ye_code])
+                final_writer.writerow(place.output())
+        final_writer.writerow('')
+        total_income = 0
+        for channel in week_chs.values():
+            final_writer.writerow(channel.output())
+
+

@@ -2,6 +2,10 @@
 import csv
 import httplib
 import json
+import threading
+import time
+
+from multiprocessing import Process
 
 
 class Cinema:
@@ -43,14 +47,55 @@ def request_cinema_data(idx, week):
     conn.request("GET", "/BoxOffice/getCBW?pIndex=" + str(idx) + "&dt=" + str(week))
     response = conn.getresponse()
     # print "request response : " + str(response.status)
-    cinemas = json.loads(response.read())['data1']
+    json_obj = json.loads(response.read())
+    cinemas = json_obj['data1']
+    t = json_obj['pCount']
     for i in range(0, len(cinemas)):
         ret.append(Cinema(cinemas[i]))
     conn.close()
-    return ret
+    return ret, t
 
 
-week_idx = 978
+class CinemaProcess(Process):
+    start_idx = 0
+    end_idx = 0
+    week_idx = 0
+
+    def __init__(self, start, end, w_idx):
+        Process.__init__(self)
+        self.start_idx = start
+        self.end_idx = end
+        self.week_idx = w_idx
+
+    def run(self):
+        print('thread run : ' + str(self.start_idx) + " to " + str(self.end_idx))
+        for idx in range(self.start_idx, self.end_idx + 1):
+            cinema_list, t = request_cinema_data(idx, self.week_idx)
+            append_cinema_list(cinema_list)
+            if len(cinema_list) < 10:
+                break
+        global lockp
+        global t_list
+        lockp.acquire()
+        t_list.remote(self)
+        lockp.release()
+
+
+def append_cinema_list(cinema_list):
+    lock.acquire()
+    global ids
+    global count
+    global writer
+    for cinema in cinema_list:
+        if cinema.cinemaId not in ids:
+            ids.append(cinema.cinemaId)
+            writer.writerow(cinema.output())
+            count += 1
+            print('影院[' + cinema.cinemaName + ']导入完成;总数[' + str(count) + ']')
+    lock.release()
+
+
+week_idx = 979
 writer = csv.writer(file('week/cbooo/week_' + str(week_idx) + '.csv', 'wb'))
 title = [0] * 8
 title[0] = '影院ID'
@@ -62,18 +107,39 @@ title[5] = '场均人次'
 title[6] = '单日单厅票房'
 title[7] = '单日单厅场次'
 writer.writerow(title)
-index = 1
-count = 0
+
+
+lock = threading.Lock()
+lockp = threading.Lock()
 ids = []
-while index > 0:
-    cinema_list = request_cinema_data(index, week_idx)
-    for cinema in cinema_list:
-        if cinema.cinemaId not in ids:
-            ids.append(cinema.cinemaId)
-            writer.writerow(cinema.output())
-            count += 1
-            print('影院[' + cinema.cinemaName + ']导入完成;总数[' + str(count) + ']')
-    if len(cinema_list) >= 10:
-        index += 1
+count = 0
+index = 2
+c_list, total = request_cinema_data(1, week_idx)
+total = total - 1
+append_cinema_list(c_list)
+t_list = []
+
+while total > 500:
+    idx_s = index
+    idx_e = index + 500
+    total = total - 500
+    index = idx_e + 1
+    p = CinemaProcess(idx_s, idx_e, week_idx)
+    t_list.append(p)
+    p.daemon = True
+    p.start()
+
+if total > 0:
+    p = CinemaProcess(index, index + total, week_idx)
+    t_list.append(p)
+    p.daemon = True
+    p.start()
+
+
+while True:
+    lockp.acquire()
+    if len(t_list) > 0:
+        time.sleep(5)
     else:
-        index = -1
+        break
+    lockp.release()
