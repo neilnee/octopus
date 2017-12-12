@@ -180,6 +180,8 @@ class Channel4Week:
     ch_name = ''
     wmq_code_map = {}
     day_of_month = 0
+    monday = ''
+    sunday = ''
 
     def __init__(self, channel_info, mday, sday, dom):
         self.places = {}
@@ -189,6 +191,8 @@ class Channel4Week:
         self.cpt = int(channel_info['cpt'])
         self.ch_name = channel_info['name']
         self.day_of_month = dom
+        self.monday = mday
+        self.sunday = sday
         if len(channel_info['include']) > 0:
             for p in channel_info['include']:
                 if time.strptime(p['open_time'], '%Y-%m-%d') <= time.strptime(sday, '%Y-%m-%d'):
@@ -227,7 +231,8 @@ class Channel4Week:
         l_user_cinema2enter = 0.0
         l_ret = 0.0
 
-        temp_user_enter = 0
+        valid_user_enter = 0
+        valid_user_cinema = 0
 
         for p in self.places.values():
             l_income += p.r_income
@@ -240,12 +245,14 @@ class Channel4Week:
             l_user_pay += p.r_user_pay
             l_user_play += p.r_user_play
             l_ret += p.r_work_day * p.ret / self.day_of_month
+            l_user_cinema += p.r_user_cinema
 
-            if p.r_user_cinema > 0:
-                temp_user_enter += p.r_user_enter
-                l_user_cinema += p.r_user_cinema
+            if p.r_user_cinema > 0 \
+                    and time.strptime(p.catchme_time, '%Y-%m-%d') <= time.strptime(str(sunday), '%Y-%m-%d'):
+                valid_user_cinema += p.r_user_cinema
+                valid_user_enter += p.r_user_enter
                 try:
-                    l_user_cinema2enter = float(temp_user_enter) / float(l_user_cinema)
+                    l_user_cinema2enter = float(valid_user_enter) / float(valid_user_cinema)
                 except Exception:
                     pass
             try:
@@ -257,7 +264,7 @@ class Channel4Week:
             except Exception:
                 pass
 
-        line = [0] * 18
+        line = [0] * 16
         line[0] = str(self.ch_name.encode('utf-8'))
         line[1] = ''
         line[2] = l_income
@@ -274,9 +281,9 @@ class Channel4Week:
         line[13] = l_user_enter2pay
         line[14] = l_user_cinema
         line[15] = l_user_cinema2enter
-        line[16] = l_ret
-        line[17] = l_earn - l_ret
-        return line
+        # line[16] = l_ret
+        # line[17] = l_earn - l_ret
+        return line, valid_user_enter, valid_user_cinema
 
 
 class Cinema4Week:
@@ -566,6 +573,7 @@ def getyesterday():
     today = datetime.date.today()
     oneday = datetime.timedelta(days=1)
     return today - oneday
+
 
 def load_weimaqi(input_file, ch_item):
     with open(input_file) as wmq_file:
@@ -865,8 +873,41 @@ if __name__ == '__main__':
                     place.append_cinema(cinema_map[place.ye_code])
                 final_writer.writerow(place.output())
         final_writer.writerow('')
-        total_income = 0
+        total_valid_user_enter = 0
+        total_valid_user_cinema = 0
+        total_line = [0] * 16
+        total_line[0] = '汇总'
+        total_line[1] = ''
+        total_line[9] = '/'
         for channel in week_chs.values():
-            final_writer.writerow(channel.output())
+            line, valid_user_enter, valid_user_cinema = channel.output()
+            total_valid_user_enter += valid_user_enter
+            total_valid_user_cinema += valid_user_cinema
+            total_line[2] += float(line[2])
+            total_line[3] += float(line[3])
+            total_line[5] += int(line[5])
+            total_line[6] += int(line[6])
+            total_line[7] += int(line[7])
+            total_line[8] += int(line[8])
+            total_line[10] += int(line[10])
+            total_line[11] += int(line[11])
+            total_line[12] += int(line[12])
+            total_line[14] += float(line[14])
+            final_writer.writerow(line)
+        # noinspection PyBroadException
+        try:
+            total_line[4] = float(total_line[5]) / float(total_line[8])
+        except Exception:
+            total_line[4] = 0.0
+        # noinspection PyBroadException
+        try:
+            total_line[13] = float(total_line[11]) / float(total_line[10])
+        except Exception:
+            total_line[13] = 0.0
+        # noinspection PyBroadException
+        try:
+            total_line[15] = float(total_valid_user_enter) / float(total_valid_user_cinema)
+        except Exception:
+            total_line[15] = 0.0
 
-
+        final_writer.writerow(total_line)
