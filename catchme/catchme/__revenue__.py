@@ -142,8 +142,9 @@ class Place4Week:
         except Exception:
             self.r_user_cinema2enter = 0.0
 
+    # noinspection PyBroadException
     def output(self):
-        line = [0] * 17
+        line = [0] * 18
         line[0] = str(self.p_name.encode('utf-8'))
         line[1] = self.r_work_day
         line[2] = self.r_income
@@ -160,7 +161,14 @@ class Place4Week:
         line[13] = self.r_user_enter2pay
         line[14] = self.r_user_cinema
         line[15] = self.r_user_cinema2enter
-        line[16] = float(self.r_play_time) / float(self.r_user_play)
+        try:
+            line[16] = float(self.r_play_time) / float(self.r_user_play)
+        except Exception:
+            line[16] = 0.0
+        try:
+            line[17] = float(self.r_income) / float(self.r_play_time)
+        except Exception:
+            line[17] = 0.0
         return line
 
     def print_infos(self):
@@ -265,9 +273,9 @@ class Channel4Week:
             except Exception:
                 pass
 
-        line = [0] * 16
+        line = [0] * 18
         line[0] = str(self.ch_name.encode('utf-8'))
-        line[1] = ''
+        line[1] = '/'
         line[2] = l_income
         line[3] = l_earn
         line[4] = l_probability
@@ -282,8 +290,14 @@ class Channel4Week:
         line[13] = l_user_enter2pay
         line[14] = l_user_cinema
         line[15] = l_user_cinema2enter
-        # line[16] = l_ret
-        # line[17] = l_earn - l_ret
+        try:
+            line[16] = float(l_play_time) / float(l_user_play)
+        except Exception:
+            line[16] = 0.0
+        try:
+            line[17] = float(l_income) / float(l_play_time)
+        except Exception:
+            line[17] = 0.0
         return line, valid_user_enter, valid_user_cinema
 
 
@@ -904,9 +918,9 @@ if __name__ == '__main__':
         final_writer.writerow('')
         total_valid_user_enter = 0
         total_valid_user_cinema = 0
-        total_line = [0] * 16
+        total_line = [0] * 18
         total_line[0] = '汇总'
-        total_line[1] = ''
+        total_line[1] = '/'
         total_line[9] = '/'
         for channel in week_chs.values():
             line, valid_user_enter, valid_user_cinema = channel.output()
@@ -938,5 +952,15 @@ if __name__ == '__main__':
             total_line[15] = float(total_valid_user_enter) / float(total_valid_user_cinema)
         except Exception:
             total_line[15] = 0.0
+        # noinspection PyBroadException
+        try:
+            total_line[16] = float(total_line[8]) / float(total_line[12])
+        except Exception:
+            total_line[16] = 0.0
+        # noinspection PyBroadException
+        try:
+            total_line[17] = float(total_line[2]) / float(total_line[8])
+        except Exception:
+            total_line[17] = 0.0
 
         final_writer.writerow(total_line)
