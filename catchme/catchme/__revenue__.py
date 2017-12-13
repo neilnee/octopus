@@ -143,7 +143,7 @@ class Place4Week:
             self.r_user_cinema2enter = 0.0
 
     def output(self):
-        line = [0] * 16
+        line = [0] * 17
         line[0] = str(self.p_name.encode('utf-8'))
         line[1] = self.r_work_day
         line[2] = self.r_income
@@ -160,6 +160,7 @@ class Place4Week:
         line[13] = self.r_user_enter2pay
         line[14] = self.r_user_cinema
         line[15] = self.r_user_cinema2enter
+        line[16] = float(self.r_play_time) / float(self.r_user_play)
         return line
 
     def print_infos(self):
@@ -345,7 +346,7 @@ class Channel4Day:
                     self.revenue_cvt[wmq_key] = place_key
                     if bool(place['open']):
                         self.places.append(place_key)
-                        self.revenue[place_key] = [0] * 17
+                        self.revenue[place_key] = [0] * 18
                         self.revenue[place_key][0] = str(place['name'].encode('utf-8'))
                         self.revenue[place_key][11] = int(place['disable'])
                         self.revenue[place_key][12] = str(self.name.encode('utf-8'))
@@ -362,6 +363,7 @@ class Channel4Day:
 
         self.ret = self.ret / calendar.monthrange(struct_t.tm_year, struct_t.tm_mon)[1]
 
+    # noinspection PyBroadException
     def append_weimaqi_data(self, input_line):
         wmq_key = md5(input_line[0], False)
         if wmq_key in self.revenue_cvt.keys() and self.revenue_cvt[wmq_key] in self.revenue.keys():
@@ -372,7 +374,6 @@ class Channel4Day:
             revenue_line[9] += int(input_line[9])
             revenue_line[7] += int(input_line[7])
             revenue_line[8] += int(input_line[8])
-            # noinspection PyBroadException
             try:
                 revenue_line[5] = float(revenue_line[6]) / float(revenue_line[9])
             except Exception:
@@ -382,10 +383,14 @@ class Channel4Day:
                 revenue_line[11] = int(input_line[11])
             revenue_line[2] = float(revenue_line[1]) / (revenue_line[10] + revenue_line[11])
             revenue_line[4] = revenue_line[3] / (revenue_line[10] + revenue_line[11])
+            try:
+                revenue_line[17] = float(revenue_line[9]) / float(revenue_line[15])
+            except Exception:
+                revenue_line[17] = 0.0
         else:
             if wmq_key in self.revenue_cvt.keys() and self.revenue_cvt[wmq_key] in self.close_place:
                 return
-            wmq_line = [0] * 17
+            wmq_line = [0] * 18
             wmq_line[0] = input_line[0]
             wmq_line[1] = input_line[1]
             wmq_line[2] = input_line[2]
@@ -403,6 +408,7 @@ class Channel4Day:
             wmq_line[14] = 0
             wmq_line[15] = 0
             wmq_line[16] = 0
+            wmq_line[17] = 0.0
             self.revenue_wmq.append(wmq_line)
 
     # noinspection PyBroadException
@@ -452,6 +458,11 @@ class Channel4Day:
                 revenue_line[16] = float(revenue_line[14]) / float(revenue_line[13])
             except Exception:
                 revenue_line[16] = 0.0
+            # 人均游戏次数
+            try:
+                revenue_line[17] = float(revenue_line[9]) / float(revenue_line[15])
+            except Exception:
+                revenue_line[17] = 0.0
             print('[' + revenue_line[12] + '][' + revenue_line[0] + '][' + str(revenue_line[1])
                   + '][' + str(input_line[3].value) + '][' + str(input_line[4].value) + ']')
 
@@ -528,7 +539,7 @@ class Channel4Day:
             except Exception:
                 user_enter_to_pay = 0.0
 
-            total_line = [0] * 23
+            total_line = [0] * 24
             total_line[0] = str(self.name.encode('utf-8'))
             total_line[1] = income
             total_line[2] = income_ave
@@ -546,12 +557,16 @@ class Channel4Day:
             total_line[14] = total_user_pay
             total_line[15] = total_user_play
             total_line[16] = user_enter_to_pay
-            total_line[17] = self.ret
-            total_line[18] = profit_net
-            total_line[19] = profit_net_ave
-            total_line[20] = total_place
-            total_line[21] = total_352
-            total_line[22] = float(total_352) / float(total_place)
+            try:
+                total_line[17] = float(total_play) / float(total_user_play)
+            except Exception:
+                total_line[17] = 0.0
+            total_line[18] = self.ret
+            total_line[19] = profit_net
+            total_line[20] = profit_net_ave
+            total_line[21] = total_place
+            total_line[22] = total_352
+            total_line[23] = float(total_352) / float(total_place)
 
         return self.name.encode('utf-8'), income, income_ave, profit, profit_ave, profit_net, profit_net_ave, \
                profit_net_percent, probability, total_device, total_place, total_play, total_gift, total_line, \
