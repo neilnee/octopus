@@ -346,7 +346,7 @@ class Channel4Day:
                     self.revenue_cvt[wmq_key] = place_key
                     if bool(place['open']):
                         self.places.append(place_key)
-                        self.revenue[place_key] = [0] * 18
+                        self.revenue[place_key] = [0] * 19
                         self.revenue[place_key][0] = str(place['name'].encode('utf-8'))
                         self.revenue[place_key][11] = int(place['disable'])
                         self.revenue[place_key][12] = str(self.name.encode('utf-8'))
@@ -387,10 +387,14 @@ class Channel4Day:
                 revenue_line[17] = float(revenue_line[9]) / float(revenue_line[15])
             except Exception:
                 revenue_line[17] = 0.0
+            try:
+                revenue_line[18] = float(revenue_line[1]) / float(revenue_line[9])
+            except Exception:
+                revenue_line[18] = 0.0
         else:
             if wmq_key in self.revenue_cvt.keys() and self.revenue_cvt[wmq_key] in self.close_place:
                 return
-            wmq_line = [0] * 18
+            wmq_line = [0] * 19
             wmq_line[0] = input_line[0]
             wmq_line[1] = input_line[1]
             wmq_line[2] = input_line[2]
@@ -409,6 +413,7 @@ class Channel4Day:
             wmq_line[15] = 0
             wmq_line[16] = 0
             wmq_line[17] = 0.0
+            wmq_line[18] = 0.0
             self.revenue_wmq.append(wmq_line)
 
     # noinspection PyBroadException
@@ -463,6 +468,11 @@ class Channel4Day:
                 revenue_line[17] = float(revenue_line[9]) / float(revenue_line[15])
             except Exception:
                 revenue_line[17] = 0.0
+            # 单次游戏均价
+            try:
+                revenue_line[18] = float(revenue_line[1]) / float(revenue_line[9])
+            except Exception:
+                revenue_line[18] = 0.0
             print('[' + revenue_line[12] + '][' + revenue_line[0] + '][' + str(revenue_line[1])
                   + '][' + str(input_line[3].value) + '][' + str(input_line[4].value) + ']')
 
@@ -539,7 +549,7 @@ class Channel4Day:
             except Exception:
                 user_enter_to_pay = 0.0
 
-            total_line = [0] * 24
+            total_line = [0] * 25
             total_line[0] = str(self.name.encode('utf-8'))
             total_line[1] = income
             total_line[2] = income_ave
@@ -561,12 +571,16 @@ class Channel4Day:
                 total_line[17] = float(total_play) / float(total_user_play)
             except Exception:
                 total_line[17] = 0.0
-            total_line[18] = self.ret
-            total_line[19] = profit_net
-            total_line[20] = profit_net_ave
-            total_line[21] = total_place
-            total_line[22] = total_352
-            total_line[23] = float(total_352) / float(total_place)
+            try:
+                total_line[18] = float(income) / float(total_play)
+            except Exception:
+                total_line[18] = 0.0
+            total_line[19] = self.ret
+            total_line[20] = profit_net
+            total_line[21] = profit_net_ave
+            total_line[22] = total_place
+            total_line[23] = total_352
+            total_line[24] = float(total_352) / float(total_place)
 
         return self.name.encode('utf-8'), income, income_ave, profit, profit_ave, profit_net, profit_net_ave, \
                profit_net_percent, probability, total_device, total_place, total_play, total_gift, total_line, \
